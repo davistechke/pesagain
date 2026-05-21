@@ -8,3 +8,4 @@ itsdangerous
 werkzeug
 resend
 resend
+openpyxl
