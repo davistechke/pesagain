@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainPesa | Magic Wheel</title>
+    
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/gainpesa.png') }}?v=3">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #12122b; color: #fff; }
+        
+        .glass-card { 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 20px; 
+        }
+        
+        /* Wheel CSS */
+        .wheel-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 350px) {
+            .wheel-container {
+                width: 280px;
+                height: 280px;
+            }
+        }
+
+        #wheel {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 8px solid rgba(255, 255, 255, 0.1);
+            transition: transform 4s cubic-bezier(0.1, 1, 0.1, 1);
+            overflow: hidden;
+            background: conic-gradient(
+                #ef4444 0deg 32.72deg,
+                #3b82f6 32.72deg 65.45deg,
+                #10b981 65.45deg 98.18deg,
+                #f59e0b 98.18deg 130.9deg,
+                #8b5cf6 130.9deg 163.63deg,
+                #ec4899 163.63deg 196.36deg,
+                #06b6d4 196.36deg 229.09deg,
+                #14b8a6 229.09deg 261.81deg,
+                #a855f7 261.81deg 294.54deg,
+                #64748b 294.54deg 327.27deg,
+                #f97316 327.27deg 360deg
+            );
+        }
+
+        .wheel-pointer {
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 30px;
+            height: 30px;
+            background: #ffffff;
+            clip-path: polygon(50% 100%, 0 0, 100% 0);
+            border: 2px solid #00ffcc;
+            z-index: 20;
+        }
+
+        .wheel-center {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background: #222;
+            border: 3px solid #00ffcc;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            color: #fff;
+            box-shadow: 0 0 15px #00ffcc;
+        }
+
+        .modal-bg { background: rgba(0, 0, 0, 0.95); backdrop-filter: blur(12px); z-index: 100; }
+        .toast-bg { background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(16px); z-index: 200; }
+    </style>
+</head>
+<body class="pb-10">
+
+    <header class="p-6 max-w-7xl mx-auto flex justify-between items-center">
+        <a href="/dashboard" class="w-10 h-10 glass-card flex items-center justify-center text-white">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <h1 class="text-xl font-800 italic uppercase">Gain<span class="text-yellow-400">Pesa</span></h1>
+        <div class="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-black font-black uppercase">
+            {{ user.username[0] if user else 'U' }}
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-5 mt-4">
+        
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="glass-card p-5 text-center">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Spin Wallet</h4>
+                <p class="text-xl font-bold mt-1 text-yellow-400">Ksh. <span id="spin-balance">0.00</span></p>
+            </div>
+            <div class="glass-card p-5 text-center">
+                <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Main Dashboard</h4>
+                <p class="text-xl font-bold mt-1 text-white">Ksh. <span id="main-balance">0.00</span></p>
+            </div>
+        </div>
+
+        <div class="glass-card p-8 text-center mb-8">
+            <h2 class="text-xl font-bold text-yellow-400 mb-2">🔮 The Magic Wheel</h2>
+            <p class="text-xs text-gray-400 mb-6 max-w-md mx-auto">
+                The numbers and odds are pure magic. You and the system cannot see them. 
+                Whatever odds appear on top are a surprise win or loss to you!
+            </p>
+
+            <div class="wheel-container mb-8">
+                <div class="wheel-pointer"></div>
+                <div id="wheel"></div>
+                <div class="wheel-center">MAGIC</div>
+            </div>
+
+            <div class="mb-5 max-w-xs mx-auto">
+                <label class="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Enter Your Stake</label>
+                <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-yellow-400 font-bold text-sm">Ksh.</span>
+                    <input type="number" id="stakeAmount" value="20" min="20" 
+                           class="w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-xl text-white font-bold outline-none focus:border-yellow-400 transition" 
+                           placeholder="Min 20">
+                </div>
+                <p class="text-[10px] text-gray-500 mt-1">Minimum stake is Ksh. 20</p>
+            </div>
+            
+            <button id="spinBtn" onclick="playSpin()" class="w-full max-w-xs bg-yellow-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs active:scale-95 transition-transform">
+                Cast Your Spell
+            </button>
+        </div>
+
+        <div class="glass-card p-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div>
+                <h3 class="font-bold text-sm">Low on Spin Balance?</h3>
+                <p class="text-xs text-gray-400">Fund your spin wallet using M-Pesa push.</p>
+            </div>
+            <button onclick="openDeposit()" class="bg-white text-black font-black py-3 px-6 rounded-xl uppercase text-xs active:scale-95 transition">
+                Deposit Funds
+            </button>
+        </div>
+    </main>
+
+    <div id="depositModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div class="glass-card w-full max-w-sm p-8 mx-4 transform scale-90 transition-transform bg-[#1a1a2e]" id="modalBox">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-sm font-black uppercase tracking-widest text-yellow-400">Deposit to Spin</h3>
+                <button onclick="closeDeposit()" class="text-gray-400"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <form id="depositForm" class="space-y-4">
+                <div>
+                    <label class="text-xs text-gray-400">Enter Amount (Min. 50)</label>
+                    <input type="number" id="amt" placeholder="Amount (e.g., 50)" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-yellow-400 font-bold outline-none mt-1" required min="50">
+                </div>
+
+                <div>
+                    <label class="text-xs text-gray-400">M-Pesa Number</label>
+                    <input type="text" id="phone" value="{{ user.phone if user else '' }}" placeholder="07xxxxxxxx" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-white outline-none mt-1" required>
+                </div>
+                
+                <button type="submit" id="subBtn" class="w-full bg-yellow-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs mt-2">Send STK Push</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="fixed inset-0 toast-bg flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+        <div id="toastBox" class="glass-card w-full max-w-sm p-8 mx-4 transform scale-90 transition-all bg-[#1a1a2e] text-center border-yellow-400/30">
+            <div id="toastIcon" class="w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl"></div>
+            <h3 id="toastTitle" class="text-lg font-bold mb-2"></h3>
+            <p id="toastMessage" class="text-sm text-gray-400 mb-6"></p>
+            <button onclick="closeToast()" class="bg-white text-black font-black py-3 px-8 rounded-xl uppercase text-xs active:scale-95 transition">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <div id="consentModal" class="fixed inset-0 bg-[#0c0c1a] z-[300] flex items-center justify-center p-4 overflow-y-auto">
+        <div class="glass-card w-full max-w-md p-6 sm:p-8 bg-[#161633] text-center border-yellow-400/20 my-auto overflow-y-auto max-h-[90vh]">
+            <div class="w-14 h-14 sm:w-16 sm:h-16 bg-yellow-400/10 text-yellow-400 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl sm:text-3xl font-black">
+                18+
+            </div>
+            <h3 class="text-base sm:text-lg font-bold mb-2 text-white">Age Verification & Fair Play</h3>
+            <p class="text-xs sm:text-sm text-gray-400 mb-6">
+                To access GainPesa Magic Wheel, you must confirm that you are of legal age and agree to play responsibly. Betting can be addictive.
+            </p>
+            
+            <div class="flex items-start gap-3 text-left mb-6 bg-black/20 p-4 rounded-xl border border-white/5">
+                <input type="checkbox" id="consentCheckbox" class="mt-0.5 accent-yellow-400 w-5 h-5 min-w-[20px] cursor-pointer">
+                <label for="consentCheckbox" class="text-xs text-gray-300 cursor-pointer leading-tight">
+                    I confirm that I am <span class="text-yellow-400 font-bold">18 years or older</span> and I agree to play responsibly within my financial limits.
+                </label>
+            </div>
+
+            <button id="enterGameBtn" onclick="grantConsent()" class="w-full bg-gray-600 text-gray-300 font-black py-4 rounded-xl uppercase tracking-widest text-xs transition cursor-not-allowed" disabled>
+                Enter Magic Wheel
+            </button>
+            <p class="text-[10px] text-gray-600 mt-3">By clicking above, you accept our terms of service.</p>
+        </div>
+    </div>
+
+<script>
+let currentRotation = 0;
+const totalSegments = 11;
+
+// --- RESPONSIBLE GAMING LOGIC ---
+document.addEventListener('DOMContentLoaded', () => {
+    const hasConsented = localStorage.getItem('magicWheelConsent');
+    const consentModal = document.getElementById('consentModal');
+    
+    if (hasConsented === 'true') {
+        consentModal.classList.add('hidden'); 
+    }
+
+    const checkbox = document.getElementById('consentCheckbox');
+    const enterBtn = document.getElementById('enterGameBtn');
+    
+    checkbox.addEventListener('change', function() {
+        if (this.checked) {
+            enterBtn.disabled = false;
+            enterBtn.classList.remove('bg-gray-600', 'text-gray-300', 'cursor-not-allowed');
+            enterBtn.classList.add('bg-yellow-400', 'text-black');
+        } else {
+            enterBtn.disabled = true;
+            enterBtn.classList.add('bg-gray-600', 'text-gray-300', 'cursor-not-allowed');
+            enterBtn.classList.remove('bg-yellow-400', 'text-black');
+        }
+    });
+
+    fetchSpinData();
+    setInterval(fetchSpinData, 5000);
+});
+
+function grantConsent() {
+    const checkbox = document.getElementById('consentCheckbox');
+    if (checkbox.checked) {
+        localStorage.setItem('magicWheelConsent', 'true');
+        document.getElementById('consentModal').classList.add('hidden');
+    }
+}
+
+// ------------------ TOAST LOGIC ------------------
+function showToast(title, message, type = "success") {
+    const container = document.getElementById('toastContainer');
+    const box = document.getElementById('toastBox');
+    const icon = document.getElementById('toastIcon');
+    const titleEl = document.getElementById('toastTitle');
+    const msgEl = document.getElementById('toastMessage');
+
+    titleEl.innerText = title;
+    msgEl.innerText = message;
+
+    icon.className = "w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center text-2xl";
+    box.className = "glass-card w-full max-w-sm p-8 mx-4 transform transition-all bg-[#1a1a2e] text-center";
+
+    if (type === "success") {
+        icon.classList.add('bg-green-500/20', 'text-green-500');
+        icon.innerHTML = '<i class="fas fa-check"></i>';
+        box.classList.add('border', 'border-green-500/30');
+    } else if (type === "error") {
+        icon.classList.add('bg-red-500/20', 'text-red-500');
+        icon.innerHTML = '<i class="fas fa-times"></i>';
+        box.classList.add('border', 'border-red-500/30');
+    } else {
+        icon.classList.add('bg-yellow-500/20', 'text-yellow-500');
+        icon.innerHTML = '<i class="fas fa-exclamation"></i>';
+        box.classList.add('border', 'border-yellow-500/30');
+    }
+
+    container.classList.remove('hidden');
+    setTimeout(() => { 
+        container.classList.add('opacity-100'); 
+        box.classList.add('scale-100'); 
+    }, 10);
+}
+
+function closeToast() {
+    const container = document.getElementById('toastContainer');
+    const box = document.getElementById('toastBox');
+    container.classList.remove('opacity-100'); 
+    box.classList.remove('scale-100');
+    box.classList.add('scale-90');
+    setTimeout(() => container.classList.add('hidden'), 300);
+}
+
+// ------------------ SPIN WHEEL LOGIC ------------------
+async function playSpin() {
+    const spinBtn = document.getElementById('spinBtn');
+    const stakeInput = document.getElementById('stakeAmount');
+    const stake = parseFloat(stakeInput.value);
+
+    // ✅ Updated JS validation to reject stakes below 20
+    if (isNaN(stake) || stake < 20) {
+        showToast("Invalid Stake", "The minimum stake allowed is Ksh. 20", "error");
+        return;
+    }
+
+    spinBtn.disabled = true;
+    spinBtn.innerText = "SPINNING...";
+    stakeInput.disabled = true;
+
+    try {
+        const res = await fetch('/api/spin-wheel', { 
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stake: stake })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            showToast("Transaction Failed", data.error, "error");
+            spinBtn.disabled = false;
+            spinBtn.innerText = "Cast Your Spell";
+            stakeInput.disabled = false;
+            return;
+        }
+
+        const wheel = document.getElementById('wheel');
+        const segmentDeg = 360 / totalSegments; 
+        const winningIndex = data.winning_index;
+        const selectedMultiplier = data.selected_multiplier; 
+
+        const extraSpins = (5 + Math.floor(Math.random() * 4)) * 360; 
+        const targetDeg = extraSpins + (360 - (winningIndex * segmentDeg)) - (segmentDeg / 2);
+        
+        currentRotation += targetDeg;
+        wheel.style.transform = `rotate(${currentRotation}deg)`;
+
+        setTimeout(() => {
+            if (selectedMultiplier === "x0") {
+                showToast("😞 Magic says: 0x", "No luck this time. Try casting another spell!", "warning");
+            } else {
+                showToast(`🎉 Magic says: ${selectedMultiplier}!`, `Incredible! (+Ksh. ${data.amount_won}) It has been added to your dashboard.`, "success");
+            }
+
+            document.getElementById('spin-balance').innerText = parseFloat(data.new_spin_balance).toFixed(2);
+            document.getElementById('main-balance').innerText = parseFloat(data.new_main_balance).toFixed(2);
+
+            spinBtn.disabled = false;
+            spinBtn.innerText = "Cast Your Spell";
+            stakeInput.disabled = false;
+        }, 4000);
+
+    } catch (err) {
+        showToast("Network Error", "Communication failed. Check your internet connection.", "error");
+        spinBtn.disabled = false;
+        spinBtn.innerText = "Cast Your Spell";
+        stakeInput.disabled = false;
+    }
+}
+
+// ------------------ POLLING LIVE USER DATA ------------------
+async function fetchSpinData() {
+    try {
+        const response = await fetch('/api/spin-user');
+        if (!response.ok) throw new Error('Data fetch failed');
+        const data = await response.json();
+
+        document.getElementById('spin-balance').innerText = parseFloat(data.spin_balance).toFixed(2);
+        document.getElementById('main-balance').innerText = parseFloat(data.main_balance).toFixed(2);
+    } catch (error) {
+        console.error("Polling Error: ", error);
+    }
+}
+
+// ------------------ DEPOSIT MODAL LOGIC ------------------
+function openDeposit() {
+    const m = document.getElementById('depositModal');
+    const b = document.getElementById('modalBox');
+    m.classList.remove('hidden');
+    setTimeout(() => { m.classList.add('opacity-100'); b.classList.add('scale-100'); }, 10);
+}
+
+function closeDeposit() {
+    const m = document.getElementById('depositModal');
+    const b = document.getElementById('modalBox');
+    m.classList.remove('opacity-100'); b.classList.remove('scale-100');
+    setTimeout(() => m.classList.add('hidden'), 300);
+}
+
+document.getElementById('depositForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const amt = document.getElementById('amt').value;
+    const phone = document.getElementById('phone').value;
+    const subBtn = document.getElementById('subBtn');
+
+    // ✅ Added client-side double-check for the deposit amount
+    if (parseFloat(amt) < 1) {
+        showToast("Invalid Amount", "The minimum deposit allowed is Ksh. 50", "error");
+        return;
+    }
+
+    subBtn.innerText = "SENDING STK...";
+    subBtn.disabled = true;
+
+    try {
+        const res = await fetch('/api/deposit-spin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amt, phone: phone })
+        });
+        const result = await res.json();
+        
+        if (res.ok) {
+            showToast("STK Push Sent", "An M-Pesa prompt has been pushed to your phone. Enter your PIN to complete the payment.", "success");
+            closeDeposit();
+        } else {
+            showToast("Deposit Failed", result.error, "error");
+        }
+    } catch (err) {
+        showToast("Network Error", "Request failed. Try again.", "error");
+    } finally {
+        subBtn.innerText = "Send STK Push";
+        subBtn.disabled = false;
+    }
+});
+</script>
+
+</body>
+</html>

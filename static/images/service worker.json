@@ -1,0 +1,121 @@
+const CACHE_NAME = "gainpesa-v1";
+
+// Pages and assets to cache on install
+const STATIC_ASSETS = [
+  "/",
+  "/login",
+  "/register",
+  "/static/images/gainpesa.png",
+  "/manifest.json"
+];
+
+// ── Install: pre-cache static assets ─────────────────────────────────────────
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(STATIC_ASSETS);
+    })
+  );
+  self.skipWaiting();
+});
+
+// ── Activate: clear old caches ────────────────────────────────────────────────
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+  self.clients.claim();
+});
+
+// ── Fetch: smart caching strategy ─────────────────────────────────────────────
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+
+  // Never intercept: API calls, admin, callbacks, POST requests
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/admin") ||
+    url.pathname.startsWith("/callback") ||
+    event.request.method !== "GET"
+  ) {
+    return;
+  }
+
+  // Network-first: try network, fall back to cache
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        // Cache a fresh copy of every successful response
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, clone);
+          });
+        }
+        return response;
+      })
+      .catch(() => {
+        // Network failed — try cache
+        return caches.match(event.request).then((cached) => {
+          if (cached) return cached;
+
+          // If navigating and nothing cached, show offline page
+          if (event.request.mode === "navigate") {
+            return new Response(
+              `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GainPesa — Offline</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background: #050505;
+      color: white;
+      font-family: sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 24px;
+    }
+    h1 { font-size: 2.2rem; font-weight: 900; font-style: italic; margin-bottom: 10px; }
+    span { color: #facc15; }
+    p { color: #6b7280; margin-bottom: 28px; font-size: 0.95rem; line-height: 1.6; }
+    button {
+      background: #facc15;
+      color: #000;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 14px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+  <div>
+    <h1>GAIN<span>PESA</span></h1>
+    <p>You are offline.<br>Please check your internet connection and try again.</p>
+    <button onclick="location.reload()">Try Again</button>
+  </div>
+</body>
+</html>`,
+              { headers: { "Content-Type": "text/html" } }
+            );
+          }
+        });
+      })
+  );
+});

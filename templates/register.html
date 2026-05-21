@@ -1,0 +1,265 @@
+<!DOCTYPE html> 
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainPesa | Access Portal</title>
+
+
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='images/gainpesa.png') }}?v=3">
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+    
+    body {
+        background: #050505;
+        color: white;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+
+    .orb {
+        position: fixed;
+        border-radius: 50%;
+        filter: blur(100px);
+        z-index: -1;
+        opacity: 0.5;
+    }
+    .orb-yellow { width: 300px; height: 300px; background: #facc15; top: -10%; right: -5%; }
+    .orb-purple { width: 400px; height: 400px; background: #7c3aed; bottom: -10%; left: -10%; opacity: 0.2; }
+
+    .glass-container {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(25px) saturate(150%);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .input-style {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: white;
+        padding: 12px 16px;
+        border-radius: 14px;
+        width: 100%;
+        outline: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .input-style:focus {
+        border-color: #facc15;
+        background: rgba(255, 255, 255, 0.08);
+        box-shadow: 0 0 20px rgba(250, 204, 21, 0.15);
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .toggle-btn {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #6b7280;
+        transition: color 0.3s;
+    }
+
+    .toggle-btn:hover {
+        color: #facc15;
+    }
+
+    .popup {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        background: rgba(239, 68, 68, 0.2);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #fca5a5;
+        padding: 16px 24px;
+        border-radius: 16px;
+        z-index: 1000;
+        animation: slideIn 0.5s ease forwards;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #050505; }
+    ::-webkit-scrollbar-thumb { background: rgba(250, 204, 21, 0.3); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(250, 204, 21, 0.5); }
+</style>
+
+
+</head>
+
+<body class="min-h-screen flex items-center justify-center py-12 px-4">
+
+
+<div class="orb orb-yellow"></div>
+<div class="orb orb-purple"></div>
+
+{% if error %}
+<div class="popup" id="errorPopup">
+    <div class="flex items-center gap-3">
+        <i class="fas fa-circle-exclamation"></i>
+        <span class="text-sm font-semibold">{{ error }}</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="glass-container w-full max-w-md rounded-[2.5rem] p-8 md:p-10 relative z-10 my-auto">
+    
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-black italic tracking-tighter mb-2">
+            GAIN<span class="text-yellow-400">PESA</span>
+        </h1>
+        <p class="text-gray-400 text-[10px] uppercase font-bold tracking-[0.2em]">Digital Finance Ecosystem</p>
+    </div>
+
+    <h2 id="formHeader" class="text-xl font-bold text-white mb-6 text-center">Create Account</h2>
+
+    <form id="authForm" method="POST" class="space-y-5">
+
+        <div id="regFields" class="space-y-5">
+            <div>
+                <label class="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2 block ml-1">Username</label>
+                <input type="text" name="username" placeholder="Choose username" class="input-style text-sm" minlength="3">
+            </div>
+
+            <div>
+                <label class="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2 block ml-1">Phone Number</label>
+                <input type="text" name="phone" placeholder="2547... or 2541..." class="input-style text-sm" pattern="254[17]\d{8}" title="Phone must start with 2547 or 2541">
+            </div>
+        </div>
+
+        <div>
+            <label id="emailLabel" class="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2 block ml-1">Email Address</label>
+            <input id="emailInput" type="email" name="email" placeholder="email@example.com" class="input-style text-sm" required>
+        </div>
+
+        <div>
+            <label class="text-[10px] uppercase font-bold text-gray-500 tracking-widest mb-2 block ml-1">Password</label>
+            <div class="password-wrapper">
+                <input id="passwordInput" type="password" name="password" placeholder="••••••••" class="input-style text-sm" required minlength="6">
+                <i class="fas fa-eye toggle-btn" id="passwordToggle"></i>
+            </div>
+
+            <!-- ✅ FORGOT PASSWORD -->
+            <p id="forgotPassword" class="text-right text-xs mt-2 hidden">
+                <a href="/forgot-password" class="text-yellow-400 font-bold hover:text-yellow-300">
+                    Forgot Password?
+                </a>
+            </p>
+        </div>
+
+        <input type="hidden" name="ref" value="{{ ref_code if ref_code else '' }}">
+
+        <button id="submitBtn" class="w-full bg-yellow-400 text-black font-extrabold py-4 rounded-2xl hover:bg-yellow-500 transition-all duration-300 uppercase tracking-widest text-xs mt-4 active:scale-[0.98] shadow-lg shadow-yellow-400/20">
+            Initialize Account
+        </button>
+
+    </form>
+
+    <p class="text-gray-400 text-xs mt-8 text-center">
+        <span id="toggleText">Already a member?</span>
+        <a href="javascript:void(0)" id="toggleLink" class="text-yellow-400 font-bold hover:text-yellow-300 ml-1">Sign In</a>
+    </p>
+
+    <div class="mt-8 pt-6 border-t border-white/5 flex justify-center items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+        <p class="text-gray-500 text-[10px] font-medium uppercase tracking-widest">System Online</p>
+    </div>
+</div>
+
+<script>
+    setTimeout(() => {
+        const popup = document.getElementById('errorPopup');
+        if (popup) {
+            popup.style.transition = "opacity 0.5s ease";
+            popup.style.opacity = "0";
+            setTimeout(() => popup.remove(), 500);
+        }
+    }, 4000);
+
+    const passwordInput = document.getElementById('passwordInput');
+    const passwordToggle = document.getElementById('passwordToggle');
+
+    passwordToggle.addEventListener('click', () => {
+        const isPassword = passwordInput.getAttribute('type') === 'password';
+        passwordInput.setAttribute('type', isPassword ? 'text' : 'password');
+        passwordToggle.classList.toggle('fa-eye');
+        passwordToggle.classList.toggle('fa-eye-slash');
+    });
+
+    const form = document.getElementById('authForm');
+    const regFields = document.getElementById('regFields');
+    const submitBtn = document.getElementById('submitBtn');
+    const toggleText = document.getElementById('toggleText');
+    const toggleLink = document.getElementById('toggleLink');
+    const formHeader = document.getElementById('formHeader');
+    const emailLabel = document.getElementById('emailLabel');
+    const emailInput = document.getElementById('emailInput');
+    const forgotPassword = document.getElementById('forgotPassword');
+
+    function setLoginView() {
+        form.action = "/login";
+        regFields.classList.add('hidden');
+        regFields.querySelectorAll('input').forEach(i => i.required = false);
+        emailLabel.innerText = "Email or Username";
+        emailInput.type = "text"; 
+        emailInput.placeholder = "Enter identifier";
+        emailInput.name = "credential";
+        formHeader.innerText = "Welcome Back";
+        submitBtn.innerText = "Sign In";
+        toggleText.innerText = "Don't have an account?";
+        toggleLink.innerText = "Register";
+
+        // ✅ SHOW FORGOT PASSWORD
+        forgotPassword.classList.remove('hidden');
+    }
+
+    function setRegisterView() {
+        form.action = "/register";
+        regFields.classList.remove('hidden');
+        regFields.querySelectorAll('input').forEach(i => i.required = true);
+        emailLabel.innerText = "Email Address";
+        emailInput.type = "email";
+        emailInput.placeholder = "email@example.com";
+        emailInput.name = "email";
+        formHeader.innerText = "Create Account";
+        submitBtn.innerText = "Initialize Account";
+        toggleText.innerText = "Already a member?";
+        toggleLink.innerText = "Sign In";
+
+        // ✅ HIDE FORGOT PASSWORD
+        forgotPassword.classList.add('hidden');
+    }
+
+    toggleLink.addEventListener('click', () => {
+        if (form.action.endsWith('/register')) {
+            window.history.pushState({}, '', '/login');
+            setLoginView();
+        } else {
+            window.history.pushState({}, '', '/register');
+            setRegisterView();
+        }
+    });
+
+    if (window.location.pathname === "/login") setLoginView();
+    else setRegisterView();
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainPesa | Binary Trading</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/gainpesa.png') }}?v=3">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        * { box-sizing: border-box; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #12122b; color: #fff; min-height: 100vh; overflow-x: hidden; }
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image: linear-gradient(rgba(255,200,0,0.03) 1px, transparent 1px), linear-gradient(90deg,rgba(255,200,0,0.03) 1px,transparent 1px);
+            background-size: 40px 40px; pointer-events: none; z-index: 0;
+        }
+        #sidebar { transform: translateX(-100%); transition: 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 70; background: #1c1c3d; }
+        #sidebar.open { transform: translateX(0); }
+        .sidebar-overlay { display: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 60; }
+        .sidebar-overlay.show { display: block; }
+        .glass-card { border-radius: 20px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+        #chart-wrapper { background: #0d0d1e; border: 1px solid rgba(255,255,255,0.07); border-radius: 16px; overflow: hidden; }
+        .stat-pill { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); border-radius: 14px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+        .asset-btn { padding: 8px 14px; border-radius: 10px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #9ca3af; cursor: pointer; transition: all 0.2s; }
+        .asset-btn.active, .asset-btn:hover { background: rgba(250,204,21,0.12); border-color: rgba(250,204,21,0.4); color: #facc15; }
+        .btn-buy { background: linear-gradient(135deg,#16a34a,#15803d); border: 1px solid rgba(22,163,74,0.4); box-shadow: 0 4px 20px rgba(22,163,74,0.25); transition: all 0.2s; }
+        .btn-buy:hover:not(:disabled) { box-shadow: 0 6px 28px rgba(22,163,74,0.45); transform: translateY(-1px); }
+        .btn-buy:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-sell { background: linear-gradient(135deg,#dc2626,#b91c1c); border: 1px solid rgba(220,38,38,0.4); box-shadow: 0 4px 20px rgba(220,38,38,0.25); transition: all 0.2s; }
+        .btn-sell:hover:not(:disabled) { box-shadow: 0 6px 28px rgba(220,38,38,0.45); transform: translateY(-1px); }
+        .btn-sell:disabled { opacity: 0.5; cursor: not-allowed; }
+        .payout-badge {
+            background: linear-gradient(135deg, rgba(250,204,21,0.18), rgba(250,204,21,0.06));
+            border: 1px solid rgba(250,204,21,0.35);
+            border-radius: 16px; padding: 16px; text-align: center;
+            position: relative; overflow: hidden;
+        }
+        .payout-badge::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 0%, rgba(250,204,21,0.12), transparent 70%);
+            pointer-events: none;
+        }
+        .payout-number {
+            font-size: 52px; font-weight: 900; line-height: 1;
+            background: linear-gradient(135deg, #facc15, #f59e0b);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            letter-spacing: -2px;
+        }
+        .win-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3);
+            border-radius: 99px; padding: 4px 12px; font-size: 10px; font-weight: 800;
+            color: #22c55e; text-transform: uppercase; letter-spacing: 0.08em;
+            margin-bottom: 8px;
+        }
+        .win-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse-dot 1.2s infinite; }
+        .trade-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+        .result-overlay { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.85); backdrop-filter:blur(8px); opacity:0; pointer-events:none; transition:opacity 0.3s; }
+        .result-overlay.show { opacity:1; pointer-events:all; }
+        .result-card { border-radius:24px; padding:40px; text-align:center; transform:scale(0.85); transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1); max-width:320px; width:90%; }
+        .result-overlay.show .result-card { transform:scale(1); }
+        .result-win { background:linear-gradient(145deg,#0d2d1a,#0a1f12); border:1px solid rgba(34,197,94,0.3); }
+        .result-loss { background:linear-gradient(145deg,#2d0d0d,#1f0a0a); border:1px solid rgba(239,68,68,0.3); }
+        #countdown-bar { height:3px; background:rgba(255,255,255,0.05); border-radius:99px; overflow:hidden; }
+        #countdown-fill { height:100%; width:100%; background:linear-gradient(90deg,#facc15,#f59e0b); border-radius:99px; transition:width 1s linear; }
+        #price-display { font-size:22px; font-weight:800; letter-spacing:-0.5px; font-variant-numeric:tabular-nums; transition:color 0.3s; }
+        .price-up { color:#22c55e !important; }
+        .price-down { color:#ef4444 !important; }
+        .modal-bg { background:rgba(0,0,0,0.95); backdrop-filter:blur(12px); z-index:150; }
+        .modal-card { background:#1a1a2e; border-radius:20px; }
+        .custom-scroll::-webkit-scrollbar { width:4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:10px; }
+        .live-dot { width:8px; height:8px; border-radius:50%; background:#22c55e; animation:pulse-dot 1.5s infinite; }
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.8);} }
+        .quick-amt { padding:6px 12px; border-radius:8px; font-size:11px; font-weight:700; border:1px solid rgba(255,255,255,0.1); background:transparent; color:#9ca3af; cursor:pointer; transition:all 0.2s; }
+        .quick-amt:hover { background:rgba(250,204,21,0.1); border-color:rgba(250,204,21,0.3); color:#facc15; }
+        .confetti-burst { position: absolute; pointer-events: none; }
+        @media(max-width:768px){ #chart-wrapper{ height:260px; } }
+    </style>
+</head>
+<body>
+
+<div id="sidebarOverlay" class="fixed inset-0 sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside id="sidebar" class="fixed top-0 left-0 h-full w-64 p-6 shadow-2xl flex flex-col overflow-y-auto custom-scroll">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-xl font-800 italic uppercase">Gain<span class="text-yellow-400">Pesa</span></h1>
+        <button onclick="toggleSidebar()" class="text-gray-400 text-xl">&times;</button>
+    </div>
+    <nav class="space-y-2 flex-1">
+        <a href="/dashboard" class="flex items-center gap-4 p-3 text-gray-400 hover:text-white rounded-xl transition">
+            <i class="fas fa-th-large w-5"></i> Dashboard
+        </a>
+        <a href="/gainbinary" class="flex items-center gap-4 p-3 bg-yellow-400/10 text-yellow-400 rounded-xl font-bold">
+            <i class="fas fa-chart-line w-5"></i> Binary Trading
+        </a>
+        <a href="/spin" class="flex items-center gap-4 p-3 text-gray-400 hover:text-white rounded-xl transition">
+            <i class="fas fa-spinner w-5"></i> Spin Boost
+        </a>
+        <button onclick="alert('Coming soon!')" class="w-full flex items-center gap-4 p-3 text-gray-400 hover:text-white transition rounded-xl">
+            <i class="fas fa-plane-up w-5"></i> Aviator Crash
+        </button>
+        <div class="pt-4 border-t border-white/5">
+            <a href="https://whatsapp.com/channel/0029Vb8Sq188PgsCP4VTV13D" target="_blank" class="flex items-center gap-4 p-3 text-gray-400 hover:text-white rounded-xl transition">
+                <i class="fab fa-whatsapp w-5"></i> Network Team
+            </a>
+        </div>
+    </nav>
+    <div class="border-t border-white/5 pt-6">
+        <a href="/logout" class="flex items-center gap-4 p-3 text-red-400 font-bold">
+            <i class="fas fa-power-off w-5"></i> Logout
+        </a>
+    </div>
+</aside>
+
+<!-- Header -->
+<header class="relative z-10 p-5 max-w-7xl mx-auto flex justify-between items-center">
+    <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="w-10 h-10 glass-card flex items-center justify-center hover:border-yellow-400/30 transition">
+            <i class="fas fa-bars-staggered"></i>
+        </button>
+        <div>
+            <h1 class="text-lg font-800 italic uppercase leading-none">Gain<span class="text-yellow-400">Binary</span></h1>
+            <p class="text-[10px] text-gray-500 uppercase tracking-widest">Trading Platform</p>
+        </div>
+    </div>
+    <div class="flex items-center gap-3">
+        <div class="hidden sm:flex items-center gap-2 stat-pill">
+            <i class="fas fa-chart-line text-yellow-400 text-sm"></i>
+            <div>
+                <p class="text-[9px] text-gray-500 uppercase font-bold">Trading Balance</p>
+                <p class="text-sm font-black">Ksh. <span id="hdr-binary-bal">0.00</span></p>
+            </div>
+        </div>
+        <a href="/dashboard" class="w-10 h-10 glass-card flex items-center justify-center hover:border-yellow-400/30 transition">
+            <i class="fas fa-arrow-left text-sm text-gray-400"></i>
+        </a>
+    </div>
+</header>
+
+<main class="relative z-10 max-w-7xl mx-auto px-4 pb-12 lg:px-8">
+
+    <!-- Stats Row -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div class="stat-pill flex-col items-start gap-1">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-chart-line text-yellow-400 text-sm"></i>
+                <p class="text-[9px] text-gray-500 uppercase font-bold">Trading Balance</p>
+            </div>
+            <p class="text-sm font-black">Ksh. <span id="stat-binary">0.00</span></p>
+        </div>
+        <div class="stat-pill flex-col items-start gap-1">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-lock text-red-400 text-sm"></i>
+                <p class="text-[9px] text-gray-500 uppercase font-bold">Deposited (Locked)</p>
+            </div>
+            <p class="text-sm font-black">Ksh. <span id="stat-deposited">0.00</span></p>
+        </div>
+        <div class="stat-pill flex-col items-start gap-1 cursor-pointer hover:border-green-400/40 transition" onclick="openClaimModal()">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-trophy text-green-400 text-sm"></i>
+                <p class="text-[9px] text-gray-500 uppercase font-bold">Winnings (Claimable)</p>
+            </div>
+            <p class="text-sm font-black text-green-400">Ksh. <span id="stat-winnings">0.00</span></p>
+        </div>
+        <div class="stat-pill cursor-pointer hover:border-yellow-400/30 transition" onclick="openDepositModal()">
+            <i class="fas fa-mobile-screen-button text-yellow-400"></i>
+            <div>
+                <p class="text-[9px] text-gray-500 uppercase font-bold">M-Pesa Deposit</p>
+                <p class="text-xs font-black text-yellow-400">Min. $1 (Ksh <span id="min-dep-label">130</span>)</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Locked deposit notice -->
+    <div class="glass-card p-3 mb-5 flex items-start gap-3 border border-red-500/20">
+        <i class="fas fa-lock text-red-400 text-sm mt-0.5 shrink-0"></i>
+        <p class="text-[11px] text-gray-400 leading-relaxed">
+            <span class="text-white font-bold">Deposited capital is locked for trading only</span> and cannot be withdrawn to M-Pesa.
+            Only your <span class="text-green-400 font-bold">net profit (winnings)</span> can be claimed and sent to your earnings wallet for withdrawal.
+        </p>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+        <!-- Left: Chart -->
+        <div class="lg:col-span-2 flex flex-col gap-4">
+
+            <!-- Asset selector + price -->
+            <div class="glass-card p-4 flex items-center justify-between flex-wrap gap-3">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button class="asset-btn active" data-symbol="FX:EURUSD" onclick="switchAsset(this,'FX:EURUSD','EUR/USD')">EUR/USD</button>
+                    <button class="asset-btn" data-symbol="FX:GBPUSD" onclick="switchAsset(this,'FX:GBPUSD','GBP/USD')">GBP/USD</button>
+                    <button class="asset-btn" data-symbol="BINANCE:BTCUSDT" onclick="switchAsset(this,'BINANCE:BTCUSDT','BTC/USDT')">BTC/USDT</button>
+                    <button class="asset-btn" data-symbol="FX:USDJPY" onclick="switchAsset(this,'FX:USDJPY','USD/JPY')">USD/JPY</button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="live-dot"></div>
+                    <div class="text-right">
+                        <div id="price-display" class="text-white">—</div>
+                        <p id="price-change" class="text-[10px] text-gray-500 font-bold">+0.00%</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TradingView Chart -->
+            <div id="chart-wrapper" style="height:380px;">
+                <iframe id="tv-iframe"
+                    src="https://s.tradingview.com/widgetembed/?symbol=FX%3AEURUSD&interval=1&theme=dark&style=1&locale=en&toolbar_bg=%2312122b&hide_top_toolbar=0&save_image=0&calendar=0&hide_legend=0&hotlist=0"
+                    width="100%" height="100%" frameborder="0" allowtransparency="true">
+                </iframe>
+            </div>
+
+            <!-- Countdown Bar -->
+            <div id="trade-timer-wrap" class="glass-card p-3 hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-[10px] uppercase tracking-widest font-bold text-yellow-400">
+                        <i class="fas fa-clock mr-1"></i> Trade in progress
+                    </p>
+                    <span id="timer-seconds" class="text-sm font-black text-white">—</span>
+                </div>
+                <div id="countdown-bar"><div id="countdown-fill"></div></div>
+            </div>
+
+            <!-- Trade History -->
+            <div class="glass-card p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xs font-black uppercase tracking-widest">Session Trade History</h3>
+                    <span id="win-rate-badge" class="text-[10px] font-bold px-2 py-1 rounded-lg bg-yellow-400/10 text-yellow-400">No trades yet</span>
+                </div>
+                <div id="trade-history" class="space-y-2 max-h-52 overflow-y-auto custom-scroll">
+                    <p class="text-gray-600 text-xs text-center py-6">Place your first trade to see history</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Controls -->
+        <div class="flex flex-col gap-4">
+
+            <!-- Payout Badge — 100% Win, 80% Profit -->
+            <div class="payout-badge">
+                <div class="win-badge">
+                    <div class="win-dot"></div>
+                    100% Win Rate Active
+                </div>
+                <div class="payout-number">+80%</div>
+                <p class="text-yellow-300 font-black text-sm mt-1 mb-1">Profit on Every Trade</p>
+                <p class="text-[10px] text-gray-400">Stake Ksh 100 → Get back <span class="text-green-400 font-bold">Ksh 180</span></p>
+                <div class="mt-3 pt-3 border-t border-yellow-400/15 flex items-center justify-center gap-2">
+                    <i class="fas fa-shield-check text-green-400 text-xs"></i>
+                    <span class="text-[10px] text-green-400 font-bold uppercase tracking-wider">Guaranteed — No Losses</span>
+                </div>
+            </div>
+
+            <!-- Stake -->
+            <div class="glass-card p-4">
+                <label class="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-2">Stake Amount (Ksh)</label>
+                <input type="number" id="stake-amount" value="130" min="130"
+                    class="w-full bg-black/40 border border-white/10 p-3 rounded-xl text-yellow-400 font-black text-lg outline-none focus:border-yellow-400/40 transition mb-3">
+                <!-- Live payout preview -->
+                <div class="flex items-center justify-between text-[10px] text-gray-500 mb-3 px-1">
+                    <span>You will receive:</span>
+                    <span class="text-green-400 font-black text-sm" id="payout-preview">Ksh 234.00</span>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button class="quick-amt" onclick="setAmount(130)">130</button>
+                    <button class="quick-amt" onclick="setAmount(200)">200</button>
+                    <button class="quick-amt" onclick="setAmount(300)">300</button>
+                    <button class="quick-amt" onclick="setAmount(500)">500</button>
+                    <button class="quick-amt" onclick="setAmount(1000)">1K</button>
+                    <button class="quick-amt" onclick="setMaxAmount()">MAX</button>
+                </div>
+            </div>
+
+            <!-- Duration -->
+            <div class="glass-card p-4">
+                <label class="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-2">Trade Duration</label>
+                <div class="grid grid-cols-4 gap-2">
+                    <button class="asset-btn active" onclick="setDuration(this,30)">30s</button>
+                    <button class="asset-btn" onclick="setDuration(this,60)">1m</button>
+                    <button class="asset-btn" onclick="setDuration(this,120)">2m</button>
+                    <button class="asset-btn" onclick="setDuration(this,300)">5m</button>
+                </div>
+            </div>
+
+            <!-- Active trade info -->
+            <div id="active-trade-info" class="glass-card p-4 hidden border border-yellow-400/20">
+                <p class="text-[10px] uppercase tracking-widest font-bold text-yellow-400 mb-2">⚡ Active Trade</p>
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Asset</span><span id="at-asset" class="font-bold">—</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Direction</span><span id="at-direction" class="font-bold">—</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">Stake</span><span id="at-stake" class="font-bold text-yellow-400">—</span></div>
+                    <div class="flex justify-between text-xs"><span class="text-gray-400">You'll Win</span><span id="at-potential" class="font-bold text-green-400">—</span></div>
+                </div>
+            </div>
+
+            <!-- BUY / SELL -->
+            <button id="btn-up" onclick="executeTrade('up')" class="btn-buy w-full text-white font-black py-5 rounded-2xl uppercase tracking-widest text-sm">
+                <i class="fas fa-arrow-trend-up mr-2 text-lg"></i> BUY / CALL
+            </button>
+            <button id="btn-down" onclick="executeTrade('down')" class="btn-sell w-full text-white font-black py-5 rounded-2xl uppercase tracking-widest text-sm">
+                <i class="fas fa-arrow-trend-down mr-2 text-lg"></i> SELL / PUT
+            </button>
+
+            <!-- Claim Winnings -->
+            <button onclick="openClaimModal()"
+                class="w-full glass-card border border-dashed border-green-500/30 text-green-400 py-3.5 rounded-2xl text-[10px] uppercase font-bold hover:border-green-400/60 transition">
+                <i class="fas fa-trophy mr-2"></i> Claim Winnings → Earnings Wallet
+            </button>
+
+            <!-- M-Pesa Deposit -->
+            <button onclick="openDepositModal()"
+                class="w-full glass-card border border-dashed border-yellow-400/30 text-yellow-400 py-3.5 rounded-2xl text-[10px] uppercase font-bold hover:border-yellow-400/60 transition">
+                <i class="fas fa-mobile-screen-button mr-2"></i> Deposit via M-Pesa
+            </button>
+        </div>
+    </div>
+</main>
+
+<!-- ===== RESULT OVERLAY ===== -->
+<div id="result-overlay" class="result-overlay">
+    <div id="result-card" class="result-card">
+        <div id="result-icon" class="text-6xl mb-4"></div>
+        <h2 id="result-title" class="text-2xl font-black uppercase tracking-widest mb-2"></h2>
+        <p id="result-sub" class="text-gray-400 text-sm mb-6"></p>
+        <div id="result-amount" class="payout-badge mb-6"></div>
+        <p id="result-winnings-notice" class="text-[11px] text-gray-500 mb-4 hidden"></p>
+        <button onclick="closeResult()" class="w-full bg-yellow-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-[10px]">
+            Continue Trading
+        </button>
+    </div>
+</div>
+
+<!-- ===== M-PESA DEPOSIT MODAL ===== -->
+<div id="depositModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="modal-card w-full max-w-sm p-8 mx-4 transform scale-90 transition-transform" id="depositBox">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="text-sm font-black uppercase tracking-widest text-yellow-400">Deposit to Trading</h3>
+                <p class="text-[10px] text-gray-500 mt-1">Paid via M-Pesa STK push</p>
+            </div>
+            <button onclick="closeDepositModal()" class="text-gray-400 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="bg-red-500/10 border border-red-500/20 rounded-xl p-3 mb-4">
+            <p class="text-[10px] font-black text-red-400 uppercase mb-1"><i class="fas fa-lock mr-1"></i> Important</p>
+            <p class="text-[11px] text-gray-400">Deposited funds are <strong class="text-white">locked for trading only</strong>. You cannot withdraw the deposited amount back. Only profits (winnings) can be claimed.</p>
+        </div>
+        <label class="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-2">
+            Amount (Min. Ksh <span id="modal-min-dep">130</span> ≈ $1 USD)
+        </label>
+        <input type="number" id="deposit-amount" placeholder="e.g. 500" min="130"
+            class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-yellow-400 font-bold outline-none focus:border-yellow-400/40 transition mb-3">
+        <div class="flex gap-2 mb-5">
+            <button class="quick-amt flex-1" onclick="document.getElementById('deposit-amount').value=130">Ksh 130</button>
+            <button class="quick-amt flex-1" onclick="document.getElementById('deposit-amount').value=300">300</button>
+            <button class="quick-amt flex-1" onclick="document.getElementById('deposit-amount').value=500">500</button>
+            <button class="quick-amt flex-1" onclick="document.getElementById('deposit-amount').value=1000">1K</button>
+        </div>
+        <div id="deposit-status" class="hidden mb-4 p-3 rounded-xl text-xs font-bold text-center"></div>
+        <button id="deposit-btn" onclick="doMpesaDeposit()"
+            class="w-full bg-yellow-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-[10px]">
+            <i class="fas fa-mobile-screen-button mr-2"></i> Send M-Pesa Prompt
+        </button>
+    </div>
+</div>
+
+<!-- ===== CLAIM WINNINGS MODAL ===== -->
+<div id="claimModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="modal-card w-full max-w-sm p-8 mx-4 transform scale-90 transition-transform" id="claimBox">
+        <div class="flex justify-between items-center mb-4">
+            <div>
+                <h3 class="text-sm font-black uppercase tracking-widest text-green-400">Claim Winnings</h3>
+                <p class="text-[10px] text-gray-500 mt-1">Move profits to your earnings wallet</p>
+            </div>
+            <button onclick="closeClaimModal()" class="text-gray-400 text-2xl leading-none">&times;</button>
+        </div>
+        <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-3 mb-4">
+            <p class="text-[10px] text-gray-400 uppercase font-bold">Available Winnings (Net Profit Only)</p>
+            <p class="text-xl font-black text-green-400">Ksh. <span id="claim-avail">0.00</span></p>
+            <p class="text-[10px] text-gray-500 mt-1">These will be moved to your Earnings Wallet and can then be withdrawn via M-Pesa from the dashboard.</p>
+        </div>
+        <label class="text-[10px] uppercase tracking-widest text-gray-500 font-bold block mb-2">Amount to Claim</label>
+        <input type="number" id="claim-amount" placeholder="e.g. 200" min="1"
+            class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-green-400 font-bold outline-none focus:border-green-400/40 transition mb-3">
+        <div class="flex gap-2 mb-5">
+            <button class="quick-amt flex-1" onclick="document.getElementById('claim-amount').value=100">100</button>
+            <button class="quick-amt flex-1" onclick="document.getElementById('claim-amount').value=200">200</button>
+            <button class="quick-amt flex-1" onclick="document.getElementById('claim-amount').value=500">500</button>
+            <button class="quick-amt flex-1" onclick="document.getElementById('claim-amount').value=Math.floor(window._userData?.binary_winnings||0)">MAX</button>
+        </div>
+        <button id="claim-btn" onclick="doClaimWinnings()"
+            class="w-full bg-green-500 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] hover:bg-green-600 transition">
+            <i class="fas fa-trophy mr-2"></i> Claim to Earnings Wallet
+        </button>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[300] flex flex-col gap-2"></div>
+
+<script>
+    let currentAsset = 'EUR/USD';
+    let tradeDuration = 30;
+    let tradeHistory = [];
+    let timerInterval = null;
+    let priceInterval = null;
+    let priceBase = { 'EUR/USD': 1.0850, 'GBP/USD': 1.2650, 'BTC/USDT': 67000, 'USD/JPY': 154.50 };
+
+    window._userData = { balance: 0, binary_balance: 0, binary_deposited: 0, binary_winnings: 0, min_binary_deposit: 130 };
+
+    // ---- SIDEBAR ----
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebarOverlay').classList.toggle('show');
+    }
+
+    // ---- ASSET ----
+    function switchAsset(btn, symbol, label) {
+        document.querySelectorAll('.asset-btn[data-symbol]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentAsset = label;
+        document.getElementById('price-display').innerText = '—';
+        document.getElementById('tv-iframe').src =
+            `https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}&interval=1&theme=dark&style=1&locale=en&toolbar_bg=%2312122b&hide_top_toolbar=0&save_image=0&calendar=0`;
+        clearInterval(priceInterval);
+        simulatePrice();
+    }
+
+    // ---- PRICE ----
+    function simulatePrice() {
+        clearInterval(priceInterval);
+        let base = priceBase[currentAsset] || 1.0;
+        const openPrice = base;
+        const display = document.getElementById('price-display');
+        const changeEl = document.getElementById('price-change');
+        function tick() {
+            const m = (Math.random() - 0.49) * base * 0.0003;
+            base += m;
+            priceBase[currentAsset] = base;
+            const dec = currentAsset.includes('JPY') ? 3 : currentAsset.includes('BTC') ? 2 : 5;
+            const pct = ((base - openPrice) / openPrice * 100).toFixed(3);
+            display.innerText = base.toFixed(dec);
+            display.className = m > 0 ? 'price-up' : 'price-down';
+            changeEl.innerText = (pct > 0 ? '+' : '') + pct + '%';
+            changeEl.className = 'text-[10px] font-bold ' + (pct > 0 ? 'text-green-400' : 'text-red-400');
+        }
+        tick();
+        priceInterval = setInterval(tick, 1200);
+    }
+
+    // ---- DURATION ----
+    function setDuration(btn, secs) {
+        document.querySelectorAll('.glass-card .asset-btn:not([data-symbol])').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        tradeDuration = secs;
+    }
+
+    // ---- AMOUNT ----
+    function setAmount(v) {
+        document.getElementById('stake-amount').value = v;
+        updatePayoutPreview();
+    }
+    function setMaxAmount() {
+        document.getElementById('stake-amount').value = Math.floor(window._userData.binary_balance) || 0;
+        updatePayoutPreview();
+    }
+    function updatePayoutPreview() {
+        const amt = parseFloat(document.getElementById('stake-amount').value) || 0;
+        document.getElementById('payout-preview').innerText = 'Ksh ' + (amt * 1.8).toFixed(2);
+    }
+
+    // Wire up live preview on input
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('stake-amount').addEventListener('input', updatePayoutPreview);
+        updatePayoutPreview();
+    });
+
+    // ---- EXECUTE TRADE ----
+    async function executeTrade(direction) {
+        const amount = parseFloat(document.getElementById('stake-amount').value);
+        if (isNaN(amount) || amount < 130) { showToast('Minimum stake is Ksh 130', 'warn'); return; }
+        if (amount > window._userData.binary_balance) { showToast('Insufficient trading balance. Deposit funds first.', 'error'); return; }
+
+        const btnUp = document.getElementById('btn-up');
+        const btnDown = document.getElementById('btn-down');
+        btnUp.disabled = true; btnDown.disabled = true;
+        btnUp.innerHTML = direction === 'up' ? '<i class="fas fa-clock mr-2"></i> WAITING...' : '<i class="fas fa-arrow-trend-up mr-2"></i> BUY / CALL';
+        btnDown.innerHTML = direction === 'down' ? '<i class="fas fa-clock mr-2"></i> WAITING...' : '<i class="fas fa-arrow-trend-down mr-2"></i> SELL / PUT';
+
+        const info = document.getElementById('active-trade-info');
+        info.classList.remove('hidden');
+        document.getElementById('at-asset').innerText = currentAsset;
+        document.getElementById('at-direction').innerHTML = direction === 'up'
+            ? '<span class="text-green-400">BUY / CALL ↑</span>'
+            : '<span class="text-red-400">SELL / PUT ↓</span>';
+        document.getElementById('at-stake').innerText = 'Ksh. ' + amount.toFixed(2);
+        document.getElementById('at-potential').innerText = 'Ksh. ' + (amount * 1.8).toFixed(2);
+
+        startCountdown(tradeDuration);
+
+        try {
+            const res = await fetch('/api/binary/trade', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount, direction, asset: currentAsset })
+            });
+            const data = await res.json();
+
+            setTimeout(() => {
+                clearCountdown();
+                info.classList.add('hidden');
+                btnUp.disabled = false; btnDown.disabled = false;
+                btnUp.innerHTML = '<i class="fas fa-arrow-trend-up mr-2 text-lg"></i> BUY / CALL';
+                btnDown.innerHTML = '<i class="fas fa-arrow-trend-down mr-2 text-lg"></i> SELL / PUT';
+
+                if (res.ok && !data.error) {
+                    addTradeRow({ asset: currentAsset, amount, direction, status: data.status, payout: data.payout, profit: data.profit });
+                    showResult(data.status, amount, data.payout, data.profit);
+                    fetchUserData();
+                } else {
+                    showToast(data.error || 'Trade failed', 'error');
+                }
+            }, tradeDuration * 1000);
+
+        } catch (e) {
+            clearCountdown();
+            info.classList.add('hidden');
+            btnUp.disabled = false; btnDown.disabled = false;
+            btnUp.innerHTML = '<i class="fas fa-arrow-trend-up mr-2 text-lg"></i> BUY / CALL';
+            btnDown.innerHTML = '<i class="fas fa-arrow-trend-down mr-2 text-lg"></i> SELL / PUT';
+            showToast('Network error. Check connection.', 'error');
+        }
+    }
+
+    // ---- COUNTDOWN ----
+    function startCountdown(secs) {
+        const wrap = document.getElementById('trade-timer-wrap');
+        const fill = document.getElementById('countdown-fill');
+        const label = document.getElementById('timer-seconds');
+        wrap.classList.remove('hidden');
+        fill.style.transition = 'none';
+        fill.style.width = '100%';
+        setTimeout(() => { fill.style.transition = 'width 1s linear'; }, 20);
+        let remaining = secs;
+        label.innerText = secs + 's';
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            remaining--;
+            label.innerText = remaining + 's';
+            fill.style.width = (remaining / secs * 100) + '%';
+            if (remaining <= 0) clearInterval(timerInterval);
+        }, 1000);
+    }
+    function clearCountdown() {
+        clearInterval(timerInterval);
+        document.getElementById('trade-timer-wrap').classList.add('hidden');
+    }
+
+    // ---- RESULT ----
+    function showResult(status, amount, payout, profit) {
+        const overlay = document.getElementById('result-overlay');
+        const card = document.getElementById('result-card');
+        const notice = document.getElementById('result-winnings-notice');
+
+        // Always show win (backend guarantees this)
+        card.className = 'result-card result-win';
+        document.getElementById('result-icon').innerText = '💰';
+        document.getElementById('result-title').innerText = 'YOU WON!';
+        document.getElementById('result-title').className = 'text-2xl font-black uppercase tracking-widest mb-2 text-green-400';
+        document.getElementById('result-sub').innerText = `Your ${currentAsset} trade closed in profit!`;
+        document.getElementById('result-amount').innerHTML = `
+            <p class="text-[10px] text-gray-400 uppercase font-bold mb-1">Payout received</p>
+            <p class="text-2xl font-black text-green-400">+Ksh. ${parseFloat(payout).toFixed(2)}</p>
+            <p class="text-[10px] text-gray-500 mt-1">Net profit: Ksh. ${parseFloat(profit).toFixed(2)} (+80%)</p>
+        `;
+        notice.className = 'text-[11px] text-green-400/80 mb-4';
+        notice.innerText = '✅ Net profit added to your claimable winnings. Claim anytime!';
+        notice.classList.remove('hidden');
+
+        overlay.classList.add('show');
+        spawnConfetti();
+    }
+    function closeResult() { document.getElementById('result-overlay').classList.remove('show'); }
+
+    // ---- CONFETTI ----
+    function spawnConfetti() {
+        const colors = ['#facc15','#22c55e','#3b82f6','#f472b6','#a78bfa'];
+        const overlay = document.getElementById('result-overlay');
+        for (let i = 0; i < 28; i++) {
+            const el = document.createElement('div');
+            el.style.cssText = `
+                position:absolute; width:${6+Math.random()*8}px; height:${6+Math.random()*8}px;
+                background:${colors[Math.floor(Math.random()*colors.length)]};
+                border-radius:${Math.random()>0.5?'50%':'3px'};
+                left:${10+Math.random()*80}%; top:${20+Math.random()*40}%;
+                opacity:1; pointer-events:none;
+                animation: confettiFall ${1.2+Math.random()*1.5}s ease forwards;
+                animation-delay:${Math.random()*0.4}s;
+            `;
+            overlay.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
+    }
+
+    // Inject confetti keyframes
+    const styleEl = document.createElement('style');
+    styleEl.innerHTML = `@keyframes confettiFall { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(120px) rotate(360deg);opacity:0} }`;
+    document.head.appendChild(styleEl);
+
+    // ---- TRADE HISTORY ----
+    function addTradeRow({ asset, amount, direction, status, payout, profit }) {
+        const now = new Date().toLocaleTimeString('en-KE', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+        tradeHistory.unshift({ asset, amount, direction, status, payout, profit, time: now });
+        renderTradeHistory();
+        updateWinRate();
+    }
+    function renderTradeHistory() {
+        const c = document.getElementById('trade-history');
+        if (!tradeHistory.length) {
+            c.innerHTML = '<p class="text-gray-600 text-xs text-center py-6">Place your first trade to see history</p>';
+            return;
+        }
+        c.innerHTML = tradeHistory.map(t => `
+            <div class="trade-row">
+                <div class="flex items-center gap-3">
+                    <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs ${t.direction==='up'?'bg-green-500/20 text-green-400':'bg-red-500/20 text-red-400'}">
+                        <i class="fas fa-arrow-${t.direction==='up'?'up':'down'}"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs font-bold">${t.asset}</p>
+                        <p class="text-[10px] text-gray-500">${t.time} · Ksh ${parseFloat(t.amount).toFixed(2)}</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-xs font-black text-green-400">
+                        +Ksh. ${parseFloat(t.payout).toFixed(2)}
+                    </p>
+                    <span class="text-[9px] font-black uppercase px-2 py-0.5 rounded bg-green-500/10 text-green-400">WIN ✓</span>
+                </div>
+            </div>
+        `).join('');
+    }
+    function updateWinRate() {
+        const wins = tradeHistory.filter(t => t.status === 'win').length;
+        const total = tradeHistory.length;
+        document.getElementById('win-rate-badge').innerText = `Win Rate: ${total>0?Math.round(wins/total*100):0}% (${wins}/${total})`;
+    }
+
+    // ---- M-PESA DEPOSIT MODAL ----
+    function openDepositModal() {
+        document.getElementById('modal-min-dep').innerText = window._userData.min_binary_deposit || 130;
+        document.getElementById('deposit-status').classList.add('hidden');
+        document.getElementById('deposit-amount').value = '';
+        openModal('depositModal', 'depositBox');
+    }
+    function closeDepositModal() { closeModal('depositModal', 'depositBox'); }
+
+    async function doMpesaDeposit() {
+        const amount = parseFloat(document.getElementById('deposit-amount').value);
+        const minDep = window._userData.min_binary_deposit || 130;
+        if (!amount || amount < minDep) { showToast(`Minimum deposit is Ksh ${minDep}`, 'warn'); return; }
+
+        const btn = document.getElementById('deposit-btn');
+        const statusEl = document.getElementById('deposit-status');
+        btn.innerText = 'Sending prompt...'; btn.disabled = true;
+        statusEl.classList.add('hidden');
+
+        try {
+            const res = await fetch('/api/binary/deposit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                statusEl.className = 'mb-4 p-3 rounded-xl text-xs font-bold text-center bg-green-500/10 text-green-400';
+                statusEl.innerText = '📲 M-Pesa prompt sent! Check your phone and enter your PIN to complete.';
+                statusEl.classList.remove('hidden');
+                btn.innerText = 'Waiting for payment...';
+                setTimeout(() => { fetchUserData(); }, 10000);
+                setTimeout(() => { fetchUserData(); }, 20000);
+                setTimeout(() => {
+                    fetchUserData();
+                    btn.innerText = 'Send M-Pesa Prompt';
+                    btn.disabled = false;
+                }, 30000);
+            } else {
+                statusEl.className = 'mb-4 p-3 rounded-xl text-xs font-bold text-center bg-red-500/10 text-red-400';
+                statusEl.innerText = '❌ ' + (data.error || 'Failed to initiate payment');
+                statusEl.classList.remove('hidden');
+                btn.innerText = 'Send M-Pesa Prompt'; btn.disabled = false;
+            }
+        } catch (e) {
+            showToast('Network error', 'error');
+            btn.innerText = 'Send M-Pesa Prompt'; btn.disabled = false;
+        }
+    }
+
+    // ---- CLAIM WINNINGS MODAL ----
+    function openClaimModal() {
+        const winnings = parseFloat(window._userData.binary_winnings || 0);
+        document.getElementById('claim-avail').innerText = winnings.toFixed(2);
+        document.getElementById('claim-amount').value = '';
+        if (winnings <= 0) { showToast('No winnings yet. Place a trade to earn!', 'warn'); return; }
+        openModal('claimModal', 'claimBox');
+    }
+    function closeClaimModal() { closeModal('claimModal', 'claimBox'); }
+
+    async function doClaimWinnings() {
+        const amount = parseFloat(document.getElementById('claim-amount').value);
+        if (!amount || amount <= 0) { showToast('Enter a valid amount', 'warn'); return; }
+        if (amount > (window._userData.binary_winnings || 0)) {
+            showToast(`Max claimable: Ksh ${parseFloat(window._userData.binary_winnings||0).toFixed(2)}`, 'error');
+            return;
+        }
+        const btn = document.getElementById('claim-btn');
+        btn.innerText = 'Processing...'; btn.disabled = true;
+        try {
+            const res = await fetch('/api/binary/claim-winnings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ amount })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(`Ksh. ${amount.toFixed(2)} moved to your Earnings Wallet! 🎉`, 'success');
+                closeClaimModal();
+                fetchUserData();
+            } else {
+                showToast(data.error || 'Claim failed', 'error');
+            }
+        } catch (e) {
+            showToast('Network error', 'error');
+        } finally {
+            btn.innerText = 'Claim to Earnings Wallet'; btn.disabled = false;
+        }
+    }
+
+    // ---- MODAL HELPERS ----
+    function openModal(id, boxId) {
+        const m = document.getElementById(id), b = document.getElementById(boxId);
+        m.classList.remove('hidden');
+        setTimeout(() => { m.classList.add('opacity-100'); b.classList.add('scale-100'); }, 10);
+    }
+    function closeModal(id, boxId) {
+        const m = document.getElementById(id), b = document.getElementById(boxId);
+        m.classList.remove('opacity-100'); b.classList.remove('scale-100');
+        setTimeout(() => m.classList.add('hidden'), 300);
+    }
+
+    // ---- TOAST ----
+    function showToast(msg, type = 'info') {
+        const colors = { success:'bg-green-600 text-white', error:'bg-red-600 text-white', warn:'bg-yellow-400 text-black', info:'bg-blue-600 text-white' };
+        const t = document.createElement('div');
+        t.className = `px-5 py-3 rounded-2xl text-sm font-bold shadow-2xl ${colors[type]} transition-all duration-300`;
+        t.innerText = msg;
+        document.getElementById('toast-container').appendChild(t);
+        setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(10px)'; setTimeout(() => t.remove(), 400); }, 3500);
+    }
+
+    // ---- FETCH USER DATA ----
+    async function fetchUserData() {
+        try {
+            const res = await fetch('/api/user');
+            if (!res.ok) return;
+            const data = await res.json();
+            window._userData = data;
+
+            document.getElementById('hdr-binary-bal').innerText = parseFloat(data.binary_balance).toFixed(2);
+            document.getElementById('stat-binary').innerText = parseFloat(data.binary_balance).toFixed(2);
+            document.getElementById('stat-deposited').innerText = parseFloat(data.binary_deposited || 0).toFixed(2);
+            document.getElementById('stat-winnings').innerText = parseFloat(data.binary_winnings || 0).toFixed(2);
+
+            const minDep = data.min_binary_deposit || 130;
+            document.getElementById('min-dep-label').innerText = minDep;
+            document.getElementById('modal-min-dep').innerText = minDep;
+        } catch (e) {
+            console.error('Data fetch error:', e);
+        }
+    }
+
+    // ---- INIT ----
+    document.addEventListener('DOMContentLoaded', () => {
+        fetchUserData();
+        simulatePrice();
+        setInterval(fetchUserData, 15000);
+    });
+</script>
+</body>
+</html>

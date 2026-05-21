@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <title>{% block title %}GainPesa{% endblock %}</title>
+
+    <!-- ══ PWA ══════════════════════════════════════════════════════ -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#facc15" />
+    <meta name="mobile-web-app-capable" content="yes" />
+
+    <!-- ══ iOS PWA ══════════════════════════════════════════════════ -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="GainPesa" />
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/gainpesa.png') }}" />
+
+    <!-- ══ Favicon ══════════════════════════════════════════════════ -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/gainpesa.png') }}?v=3" />
+
+    <!-- ══ SEO ══════════════════════════════════════════════════════ -->
+    <meta name="description" content="GainPesa — Digital Finance Ecosystem. Earn, trade, and withdraw with ease." />
+
+    <!-- ══ Tailwind + FontAwesome ════════════════════════════════════ -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap');
+
+        /* Remove tap flash on mobile */
+        * { -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background: #050505;
+            color: white;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+            /* Respect notch / home bar on phones */
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            /* Disable pull-to-refresh so it feels native */
+            overscroll-behavior-y: contain;
+        }
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        /* ── PWA install banner ─────────────────────────────────── */
+        #pwa-banner {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #facc15;
+            color: #000;
+            border-radius: 18px;
+            padding: 14px 18px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            z-index: 9999;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+            align-items: center;
+            gap: 12px;
+            max-width: 340px;
+            width: calc(100% - 40px);
+            animation: bannerUp 0.4s cubic-bezier(0.22,1,0.36,1);
+        }
+        #pwa-banner.show { display: flex; }
+
+        #pwa-banner .install-btn {
+            background: #000;
+            color: #facc15;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-weight: 800;
+            font-size: 0.78rem;
+            cursor: pointer;
+            white-space: nowrap;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        #pwa-banner .dismiss-btn {
+            background: rgba(0,0,0,0.12);
+            color: #000;
+            border: none;
+            padding: 7px 11px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.78rem;
+            cursor: pointer;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        @keyframes bannerUp {
+            from { opacity: 0; transform: translateX(-50%) translateY(24px); }
+            to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+    <!-- ══ PWA Install Banner ════════════════════════════════════════ -->
+    <div id="pwa-banner">
+        <span>📲 Install GainPesa on your phone!</span>
+        <button class="install-btn" id="pwa-install-btn">Install</button>
+        <button class="dismiss-btn" id="pwa-dismiss">✕</button>
+    </div>
+
+    <!-- ══ Page content ═════════════════════════════════════════════ -->
+    {% block content %}{% endblock %}
+
+    <!-- ══ Service Worker registration + install prompt ════════════ -->
+    <script>
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(reg  => console.log('[SW] Registered:', reg.scope))
+                    .catch(err => console.warn('[SW] Registration failed:', err));
+            });
+        }
+
+        // PWA install prompt
+        let deferredPrompt  = null;
+        const banner        = document.getElementById('pwa-banner');
+        const installBtn    = document.getElementById('pwa-install-btn');
+        const dismissBtn    = document.getElementById('pwa-dismiss');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            // Show banner after 3 seconds if user hasn't dismissed before
+            if (!localStorage.getItem('pwa-dismissed')) {
+                setTimeout(() => banner.classList.add('show'), 3000);
+            }
+        });
+
+        installBtn && installBtn.addEventListener('click', async () => {
+            if (!deferredPrompt) return;
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('[PWA] Outcome:', outcome);
+            deferredPrompt = null;
+            banner.classList.remove('show');
+        });
+
+        dismissBtn && dismissBtn.addEventListener('click', () => {
+            banner.classList.remove('show');
+            localStorage.setItem('pwa-dismissed', '1');
+        });
+
+        window.addEventListener('appinstalled', () => {
+            banner.classList.remove('show');
+            console.log('[PWA] App installed successfully');
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

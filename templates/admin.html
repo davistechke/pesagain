@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainPesa Admin | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; }
+        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+        .btn-gradient { background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%); }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Custom Scrollbar for the user list */
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #3b82f6; }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
+            <div>
+                <h1 class="text-3xl font-bold text-white">Admin <span class="text-blue-500">Panel</span></h1>
+                <p class="text-gray-400">Manage Users, Withdrawals & Funds</p>
+            </div>
+            <div class="flex gap-2">
+                <a href="{{ url_for('download_users_pdf', status='all') }}" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg text-sm transition">
+                    <i class="fas fa-file-pdf mr-2"></i>Export PDF
+                </a>
+                <a href="{{ url_for('logout') }}" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm transition">Logout</a>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <div class="lg:col-span-2 space-y-8">
+                <div class="card p-6">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <h2 class="text-xl font-bold flex items-center">
+                            <i class="fas fa-users mr-3 text-blue-400"></i> Active Users
+                        </h2>
+                        
+                        <div class="relative w-full md:w-64">
+                            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm"></i>
+                            <input type="text" id="userSearch" onkeyup="filterUsers()" placeholder="Search username or email..." 
+                                class="w-full bg-slate-900 border border-slate-700 rounded-lg pl-10 pr-4 py-2 text-sm outline-none focus:border-blue-500 transition">
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto custom-scrollbar" style="max-height: 500px; overflow-y: auto;">
+                        <table class="w-full text-left border-collapse" id="userTable">
+                            <thead class="sticky top-0 bg-[#1e293b] z-10">
+                                <tr class="text-gray-500 text-xs uppercase border-b border-gray-700">
+                                    <th class="p-3">User</th>
+                                    <th class="p-3">Balances (Ksh)</th>
+                                    <th class="p-3">Update Funds</th>
+                                    <th class="p-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm">
+                                {% for user in users %}
+                                <tr class="user-row border-b border-gray-800 hover:bg-slate-800/50 transition">
+                                    <td class="p-3">
+                                        <div class="font-bold text-white username-text">{{ user.username }}</div>
+                                        <div class="text-xs text-gray-500 email-text">{{ user.email }}</div>
+                                    </td>
+                                    <td class="p-3">
+                                        <div class="text-green-400">Wallet: {{ "%.2f"|format(user.balance) }}</div>
+                                        <div class="text-purple-400">Trade: {{ "%.2f"|format(user.binary_balance) }}</div>
+                                    </td>
+                                    <td class="p-3">
+                                        <div class="space-y-2">
+                                            <div class="flex gap-1">
+                                                <input type="number" id="bal-{{ user.email }}" placeholder="Add Wallet" class="w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs outline-none focus:border-blue-500">
+                                                <button onclick="updateBalance('{{ user.email }}')" class="bg-blue-600 hover:bg-blue-500 p-1 px-2 rounded text-[10px]">Add</button>
+                                            </div>
+                                            <div class="flex gap-1">
+                                                <input type="number" id="trade-{{ user.email }}" placeholder="Add Trade" class="w-20 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs outline-none focus:border-purple-500">
+                                                <button onclick="updateTrading('{{ user.email }}')" class="bg-purple-600 hover:bg-purple-500 p-1 px-2 rounded text-[10px]">Add</button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="p-3">
+                                        {% if user.is_active %}
+                                        <span class="bg-green-500/10 text-green-500 px-2 py-1 rounded-full text-[10px]">Active</span>
+                                        {% else %}
+                                        <span class="bg-yellow-500/10 text-yellow-500 px-2 py-1 rounded-full text-[10px]">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-history mr-3 text-orange-400"></i> Account Update Logs
+                    </h2>
+                    <div class="overflow-x-auto overflow-y-auto" style="max-height: 300px;">
+                        <table class="w-full text-left text-sm">
+                            <thead class="sticky top-0 bg-[#1e293b]">
+                                <tr class="bg-slate-900/50 text-xs uppercase text-gray-500">
+                                    <th class="p-3">Username</th>
+                                    <th class="p-3">Action</th>
+                                    <th class="p-3">Amount</th>
+                                    <th class="p-3">Timestamp</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recent_updates %}
+                                <tr class="border-b border-gray-800">
+                                    <td class="p-3 text-white">{{ log.username }}</td>
+                                    <td class="p-3 text-gray-400 text-xs">{{ log.action_type }}</td>
+                                    <td class="p-3 text-green-500 font-bold">+{{ "%.2f"|format(log.amount) }}</td>
+                                    <td class="p-3 text-gray-500 text-xs">{{ log.timestamp }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-8">
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-money-bill-transfer mr-3 text-green-400"></i> Withdrawals
+                    </h2>
+                    <div class="space-y-4 overflow-y-auto pr-2 custom-scrollbar" style="max-height: 800px;">
+                        {% for w in withdrawals %}
+                        <div class="p-4 rounded-lg bg-slate-900/50 border border-gray-800">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <div class="font-bold text-white">{{ w.username }}</div>
+                                    <div class="text-xs text-gray-500">{{ w.date }}</div>
+                                </div>
+                                <div class="text-green-400 font-bold">Ksh {{ w.amount }}</div>
+                            </div>
+                            <div class="text-sm text-gray-400 mb-3">
+                                <i class="fas fa-phone-alt mr-1 text-[10px]"></i> {{ w.mpesa_number }}
+                            </div>
+                            {% if w.status == 'pending' %}
+                            <button onclick="markAsPaid({{ w.id }})" class="w-full py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-bold rounded-lg transition">
+                                MARK AS PAID
+                            </button>
+                            {% else %}
+                            <div class="w-full py-2 bg-gray-800 text-gray-500 text-center text-xs rounded-lg uppercase">
+                                {{ w.status }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Search Filter Logic
+        function filterUsers() {
+            const input = document.getElementById('userSearch');
+            const filter = input.value.toLowerCase();
+            const rows = document.getElementsByClassName('user-row');
+
+            for (let i = 0; i < rows.length; i++) {
+                const username = rows[i].getElementsByClassName('username-text')[0].innerText.toLowerCase();
+                const email = rows[i].getElementsByClassName('email-text')[0].innerText.toLowerCase();
+                
+                if (username.includes(filter) || email.includes(filter)) {
+                    rows[i].style.display = "";
+                } else {
+                    rows[i].style.display = "none";
+                }
+            }
+        }
+
+        async function updateBalance(email) {
+            const amountInput = document.getElementById(`bal-${email}`);
+            const amount = amountInput.value;
+            if (!amount || amount <= 0) return alert("Enter valid amount");
+
+            if (confirm(`Add Ksh ${amount} to ${email}'s main wallet?`)) {
+                const res = await fetch('/admin/update-balance', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, balance: amount })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            }
+        }
+
+        async function updateTrading(email) {
+            const amountInput = document.getElementById(`trade-${email}`);
+            const amount = amountInput.value;
+            if (!amount || amount <= 0) return alert("Enter valid amount");
+
+            if (confirm(`Add Ksh ${amount} to ${email}'s trading account?`)) {
+                const res = await fetch('/admin/update-trading', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email, amount: amount })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            }
+        }
+
+        async function markAsPaid(id) {
+            if (confirm("Confirm payment to user? This will update user dashboard status.")) {
+                const res = await fetch('/admin/mark-paid', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    location.reload();
+                }
+            }
+        }
+    </script>
+</body>
+</html>

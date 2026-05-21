@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainPesa | Activate Account</title>
+        <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/gainpesa.png') }}?v=3">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: #12122b;
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        /* Animated grid background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255,200,0,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,200,0,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .card {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 28px;
+            padding: 40px 36px;
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Step indicators */
+        .step {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .step:last-child { border-bottom: none; }
+        .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(250,204,21,0.15);
+            border: 1px solid rgba(250,204,21,0.3);
+            color: #facc15;
+            font-size: 11px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        /* Pay button */
+        #payBtn {
+            width: 100%;
+            background: #facc15;
+            color: #000;
+            font-weight: 800;
+            font-size: 13px;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            padding: 16px;
+            border-radius: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 24px;
+        }
+        #payBtn:hover:not(:disabled) { background: #eab308; transform: translateY(-1px); }
+        #payBtn:active:not(:disabled) { transform: scale(0.98); }
+        #payBtn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+        /* Status area */
+        #status-wrap {
+            margin-top: 20px;
+            border-radius: 16px;
+            overflow: hidden;
+            display: none;
+        }
+        #status-inner {
+            padding: 16px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .status-pending { background: rgba(250,204,21,0.08); border: 1px solid rgba(250,204,21,0.2); }
+        .status-success { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.2); }
+        .status-error   { background: rgba(239,68,68,0.08);  border: 1px solid rgba(239,68,68,0.2);  }
+
+        /* Spinner */
+        .spinner {
+            width: 20px; height: 20px;
+            border: 2px solid rgba(250,204,21,0.2);
+            border-top-color: #facc15;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Pulse animation for confirmed icon */
+        @keyframes pop {
+            0% { transform: scale(0.5); opacity: 0; }
+            70% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pop { animation: pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+        /* Dots loading */
+        .dots::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+        @keyframes dots {
+            0%   { content: ''; }
+            25%  { content: '.'; }
+            50%  { content: '..'; }
+            75%  { content: '...'; }
+        }
+
+        /* Progress bar on confirm */
+        #progress-bar {
+            height: 3px;
+            background: rgba(34,197,94,0.15);
+            border-radius: 99px;
+            overflow: hidden;
+            display: none;
+            margin-top: 16px;
+        }
+        #progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            border-radius: 99px;
+            transition: width 1.4s ease;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+
+    <!-- Logo -->
+    <div class="text-center mb-6">
+        <h1 class="text-3xl font-black italic uppercase tracking-tight">
+            GAIN<span class="text-yellow-400">PESA</span>
+        </h1>
+        <p class="text-gray-500 text-xs uppercase tracking-widest mt-1">Account Activation</p>
+    </div>
+
+    <!-- User greeting -->
+    <div class="flex items-center gap-3 mb-6 p-3 rounded-2xl" style="background:rgba(250,204,21,0.06); border:1px solid rgba(250,204,21,0.15);">
+        <div class="w-9 h-9 rounded-full bg-yellow-400 flex items-center justify-center text-black font-black uppercase text-sm flex-shrink-0">
+            {{ user.username[0] if user else 'U' }}
+        </div>
+        <div>
+            <p class="text-sm font-bold text-white">{{ user.username if user else 'User' }}</p>
+            <p class="text-[10px] text-gray-500">Trading account first deposit fee</p>
+        </div>
+    </div>
+
+    <!-- Amount display -->
+    <div class="text-center mb-6 py-5" style="border:1px dashed rgba(255,255,255,0.1); border-radius:20px;">
+        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-1">Opening trading account Fee</p>
+        <p class="text-4xl font-black text-yellow-400">Ksh 100</p>
+        <p class="text-[10px] text-gray-600 mt-1">One-time · Pay</p>
+    </div>
+
+    <!-- What you get -->
+    <div class="mb-2">
+        <p class="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-3">What you get</p>
+        <div class="space-y-0">
+            <div class="step">
+                <div class="step-num">1</div>
+                <div>
+                    <p class="text-xs font-bold text-white">Full Dashboard Access</p>
+                    <p class="text-[11px] text-gray-500">Unlock all earning features immediately</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">2</div>
+                <div>
+                    <p class="text-xs font-bold text-white">Trading Capital </p>
+                    <p class="text-[11px] text-gray-500">100% of your fee credited to binary trading balance so you are not loosing it</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-num">3</div>
+                <div>
+                    <p class="text-xs font-bold text-white">Referral Commissions</p>
+                    <p class="text-[11px] text-gray-500">Earn 50% every time someone you refer activates</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pay Button -->
+    <button id="payBtn">
+        <i class="fas fa-mobile-screen-button mr-2"></i> Pay via M-Pesa
+    </button>
+
+    <!-- Progress bar (shown on success) -->
+    <div id="progress-bar"><div id="progress-fill"></div></div>
+
+    <!-- Status area -->
+    <div id="status-wrap">
+        <div id="status-inner">
+            <div id="status-icon"></div>
+            <div>
+                <p id="status-title" class="text-sm font-black"></p>
+                <p id="status-sub" class="text-[11px] text-gray-400 mt-0.5"></p>
+            </div>
+        </div>
+    </div>
+
+    <p class="text-center text-[10px] text-gray-600 mt-5">
+        Secured by GAINPESA · M-Pesa encrypted
+    </p>
+</div>
+
+<script>
+    const payBtn = document.getElementById('payBtn');
+    const statusWrap = document.getElementById('status-wrap');
+    const statusInner = document.getElementById('status-inner');
+    const statusIcon = document.getElementById('status-icon');
+    const statusTitle = document.getElementById('status-title');
+    const statusSub = document.getElementById('status-sub');
+
+    function setStatus(type, title, sub, showSpinner = false) {
+        statusWrap.style.display = 'block';
+        statusInner.className = 'status-inner ' + {
+            pending: 'status-pending',
+            success: 'status-success',
+            error:   'status-error'
+        }[type];
+
+        if (showSpinner) {
+            statusIcon.innerHTML = '<div class="spinner"></div>';
+        } else if (type === 'success') {
+            statusIcon.innerHTML = '<i class="fas fa-circle-check text-green-400 text-xl pop"></i>';
+        } else if (type === 'error') {
+            statusIcon.innerHTML = '<i class="fas fa-circle-xmark text-red-400 text-xl"></i>';
+        }
+
+        statusTitle.innerText = title;
+        statusSub.innerText = sub;
+    }
+
+    payBtn.addEventListener('click', async () => {
+        payBtn.disabled = true;
+        payBtn.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Initiating...';
+        setStatus('pending', 'Connecting to M-Pesa', 'Please wait while we send the STK push...', true);
+
+        try {
+            const resp = await fetch('/api/initiate-payment', { method: 'POST' });
+            const data = await resp.json();
+
+            if (data.success) {
+                setStatus('pending', 'Check your phone', 'Enter your M-Pesa PIN to complete payment.', true);
+                payBtn.innerHTML = '<i class="fas fa-clock mr-2"></i> Waiting for payment<span class="dots"></span>';
+                pollPayment(data.reference);
+            } else {
+                setStatus('error', 'Failed to initiate', data.error || 'Please try again.');
+                payBtn.disabled = false;
+                payBtn.innerHTML = '<i class="fas fa-mobile-screen-button mr-2"></i> Pay via M-Pesa';
+            }
+        } catch (e) {
+            setStatus('error', 'Network error', 'Check your connection and try again.');
+            payBtn.disabled = false;
+            payBtn.innerHTML = '<i class="fas fa-mobile-screen-button mr-2"></i> Pay via M-Pesa';
+        }
+    });
+
+    let pollCount = 0;
+    const MAX_POLLS = 40; // ~80 seconds timeout
+
+    async function pollPayment(ref) {
+        if (pollCount >= MAX_POLLS) {
+            setStatus('error', 'Payment timed out', 'No confirmation received. If you paid, please contact support.');
+            payBtn.disabled = false;
+            payBtn.innerHTML = '<i class="fas fa-rotate-right mr-2"></i> Try Again';
+            pollCount = 0;
+            return;
+        }
+
+        pollCount++;
+
+        try {
+            const resp = await fetch(`/api/reconcile/${ref}`);
+            const result = await resp.json();
+
+            if (result.status === 'confirmed') {
+                // Success — show confirmation then redirect
+                setStatus('success', 'Payment confirmed! 🎉', 'Redirecting you to your dashboard...');
+                payBtn.innerHTML = '<i class="fas fa-circle-check mr-2"></i> Activated!';
+
+                // Animate progress bar
+                const bar = document.getElementById('progress-bar');
+                const fill = document.getElementById('progress-fill');
+                bar.style.display = 'block';
+                setTimeout(() => { fill.style.width = '100%'; }, 50);
+
+                // Redirect after 1.8 seconds
+                setTimeout(() => {
+                    window.location.href = '/dashboard';
+                }, 1800);
+
+            } else if (result.status === 'canceled') {
+                setStatus('error', 'Payment canceled', 'You canceled or the prompt expired. Try again.');
+                payBtn.disabled = false;
+                payBtn.innerHTML = '<i class="fas fa-mobile-screen-button mr-2"></i> Pay via M-Pesa';
+                pollCount = 0;
+
+            } else {
+                // Still pending — poll again after 2s
+                setTimeout(() => pollPayment(ref), 2000);
+            }
+        } catch (e) {
+            // Network hiccup — keep polling
+            setTimeout(() => pollPayment(ref), 3000);
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GainPesa | Dashboard</title>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='images/gainpesa.png') }}?v=3">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; transition: background 0.3s, color 0.3s; }
+        body.dark-mode { background: #12122b; color: #fff; }
+        body.light-mode { background: #f3f4f6; color: #1f2937; }
+        #sidebar { transform: translateX(-100%); transition: 0.3s cubic-bezier(0.4,0,0.2,1); z-index: 70; }
+        body.dark-mode #sidebar { background: #1c1c3d; }
+        body.light-mode #sidebar { background: #ffffff; border-right: 1px solid rgba(0,0,0,0.05); }
+        #sidebar.open { transform: translateX(0); }
+        .sidebar-overlay { display: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 60; }
+        .sidebar-overlay.show { display: block; }
+        .stat-grid { display: grid; border-radius: 24px; overflow: hidden; }
+        body.dark-mode .stat-grid { background: #1c1c3d; border: 1px dashed rgba(255,255,255,0.1); }
+        body.light-mode .stat-grid { background: #ffffff; border: 1px dashed rgba(0,0,0,0.1); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .stat-item { aspect-ratio: 1/0.8; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px 10px; }
+        body.dark-mode .b-dashed { border-bottom: 1px dashed rgba(255,255,255,0.1); }
+        body.dark-mode .r-dashed { border-right: 1px dashed rgba(255,255,255,0.1); }
+        body.light-mode .b-dashed { border-bottom: 1px dashed rgba(0,0,0,0.1); }
+        body.light-mode .r-dashed { border-right: 1px dashed rgba(0,0,0,0.1); }
+        .glass-card { border-radius: 20px; }
+        body.dark-mode .glass-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); }
+        body.light-mode .glass-card { background: #ffffff; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .modal-bg { background: rgba(0,0,0,0.95); backdrop-filter: blur(12px); z-index: 100; }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    </style>
+</head>
+<body class="pb-10 dark-mode">
+
+<div id="sidebarOverlay" class="fixed inset-0 sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<aside id="sidebar" class="fixed top-0 left-0 h-full w-64 p-6 shadow-2xl flex flex-col overflow-y-auto custom-scroll">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-xl font-800 italic uppercase">Gain<span class="text-yellow-400">Pesa</span></h1>
+        <button onclick="toggleSidebar()" class="text-gray-400 text-xl">&times;</button>
+    </div>
+    <nav class="space-y-2 flex-1">
+        <div class="flex items-center justify-between p-3 mb-4 rounded-xl border border-white/5 bg-black/10">
+            <span class="text-xs font-black uppercase tracking-widest text-gray-400">Dark Mode</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="themeToggle" class="sr-only peer" checked onchange="toggleTheme()">
+                <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-yellow-400"></div>
+            </label>
+        </div>
+        <a href="#" class="flex items-center gap-4 p-3 bg-yellow-400/10 text-yellow-400 rounded-xl font-bold">
+            <i class="fas fa-th-large w-5"></i> Dashboard
+        </a>
+        <a href="/gainbinary" class="flex items-center gap-4 p-3 text-gray-400 hover:text-white rounded-xl transition">
+            <i class="fas fa-chart-line w-5"></i> Binary Trading
+        </a>
+        <a href="/spin" class="flex items-center gap-4 p-3 text-gray-400 hover:text-white rounded-xl transition">
+            <i class="fas fa-spinner w-5"></i> Spin Boost
+        </a>
+        <button onclick="showComingSoon('AVIATOR CRASH')" class="w-full flex items-center gap-4 p-3 text-gray-400 hover:text-white transition rounded-xl">
+            <i class="fas fa-plane-up w-5"></i> Aviator Crash
+        </button>
+        <button onclick="showComingSoon('PHOTOS')" class="w-full flex items-center gap-4 p-3 text-gray-400 hover:text-white transition rounded-xl">
+            <i class="fas fa-images w-5"></i> Photos
+        </button>
+        <button onclick="showComingSoon('VIDEOS')" class="w-full flex items-center gap-4 p-3 text-gray-400 hover:text-white transition rounded-xl">
+            <i class="fas fa-video w-5"></i> Videos
+        </button>
+        <div class="pt-4 border-t border-white/5">
+            <a href="https://whatsapp.com/channel/0029Vb8Sq188PgsCP4VTV13D" target="_blank" class="flex items-center gap-4 p-3 text-gray-400 hover:text-white rounded-xl transition">
+                <i class="fab fa-whatsapp w-5"></i> Network Team
+            </a>
+        </div>
+    </nav>
+    <div class="border-t border-white/5 pt-6">
+        <a href="/logout" class="flex items-center gap-4 p-3 text-red-400 font-bold">
+            <i class="fas fa-power-off w-5"></i> Logout
+        </a>
+    </div>
+</aside>
+
+<header class="p-6 max-w-7xl mx-auto flex justify-between items-center">
+    <div class="flex items-center gap-4">
+        <button onclick="toggleSidebar()" class="w-10 h-10 glass-card flex items-center justify-center">
+            <i class="fas fa-bars-staggered"></i>
+        </button>
+        <h1 class="text-xl font-800 italic uppercase hidden sm:block">Gain<span class="text-yellow-400">Pesa</span></h1>
+    </div>
+    <h1 class="text-xl font-800 italic uppercase sm:hidden">Gain<span class="text-yellow-400">Pesa</span></h1>
+    <div class="w-10 h-10 rounded-full bg-yellow-400 flex items-center justify-center text-black font-black uppercase">
+        {{ user.username[0] if user else 'U' }}
+    </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-5 lg:px-10">
+
+    <div class="mb-6">
+        <h2 class="text-xl font-800 text-white">Welcome back, <span class="text-yellow-400">{{ user.username if user else 'User' }}</span>!</h2>
+        <p class="text-xs text-gray-400 uppercase tracking-wider mt-1">Share your referral link — earn 50% commission for every activation.</p>
+    </div>
+
+    <!-- Main Stats -->
+    <div class="stat-grid grid-cols-2 md:grid-cols-4 mb-6 shadow-2xl">
+        <div class="stat-item r-dashed b-dashed md:b-0">
+            <i class="fas fa-wallet text-purple-500 text-3xl mb-3"></i>
+            <h4 class="font-semibold text-[10px] uppercase tracking-widest">Earnings Wallet</h4>
+            <p class="text-gray-400 text-sm font-bold mt-1">Ksh. <span id="span-balance">0.00</span></p>
+            <p class="text-[9px] text-green-400 mt-1 uppercase font-bold">Withdrawable</p>
+        </div>
+        <div class="stat-item md:r-dashed b-dashed md:b-0">
+            <i class="fas fa-sack-dollar text-orange-500 text-3xl mb-3"></i>
+            <h4 class="font-semibold text-[10px] uppercase tracking-widest">Total Earned</h4>
+            <p class="text-gray-400 text-sm font-bold mt-1">Ksh. <span id="span-earned">0.00</span></p>
+        </div>
+        <div class="stat-item r-dashed">
+            <i class="fas fa-money-bill-transfer text-green-400 text-3xl mb-3"></i>
+            <h4 class="font-semibold text-[10px] uppercase tracking-widest">Withdrawn</h4>
+            <p class="text-gray-400 text-sm font-bold mt-1">Ksh. <span id="span-withdrawn">0.00</span></p>
+        </div>
+        <div class="stat-item">
+            <i class="fas fa-users-viewfinder text-blue-400 text-3xl mb-3"></i>
+            <h4 class="font-semibold text-[10px] uppercase tracking-widest">Referrals</h4>
+            <p class="text-gray-400 text-sm font-bold mt-1"><span id="span-referred">0</span></p>
+        </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div class="glass-card p-4 mb-6 border border-yellow-400/20 flex items-start gap-3">
+        <i class="fas fa-info-circle text-yellow-400 mt-0.5"></i>
+        <div>
+            <p class="text-xs font-black text-yellow-400 uppercase tracking-widest mb-1">How Withdrawals Work</p>
+            <p class="text-[11px] text-gray-400 leading-relaxed">
+                Your <span class="text-white font-bold">Earnings Wallet</span> holds referral commissions — fully withdrawable.
+                Binary trading deposits are <span class="text-white font-bold">locked for trading only</span>.
+                To access trading profits, use the <span class="text-white font-bold">Claim Winnings</span> button in the trading page.
+            </p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <section class="glass-card p-5">
+            <h3 class="text-xs font-black uppercase tracking-widest mb-4">Ways of Earning</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <a href="/gainbinary" class="bg-black/20 p-4 rounded-xl text-center hover:border-yellow-400 border border-transparent transition block">
+                    <i class="fas fa-chart-line text-yellow-400 text-xl mb-2"></i>
+                    <p class="text-xs font-bold">Binary Trading</p>
+                </a>
+                <a href="/spin" class="bg-black/20 p-4 rounded-xl text-center hover:border-yellow-400 border border-transparent transition block">
+                    <i class="fas fa-spinner text-yellow-400 text-xl mb-2"></i>
+                    <p class="text-xs font-bold">Spin Boost</p>
+                </a>
+                <div onclick="showComingSoon('AVIATOR CRASH')" class="bg-black/20 p-4 rounded-xl text-center cursor-pointer hover:border-yellow-400 border border-transparent transition">
+                    <i class="fas fa-plane-up text-yellow-400 text-xl mb-2"></i>
+                    <p class="text-xs font-bold">Aviator Crash</p>
+                </div>
+                <div onclick="showComingSoon('PHOTOS/VIDEOS')" class="bg-black/20 p-4 rounded-xl text-center cursor-pointer hover:border-yellow-400 border border-transparent transition">
+                    <i class="fas fa-photo-film text-yellow-400 text-xl mb-2"></i>
+                    <p class="text-xs font-bold">Media Tasks</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="flex flex-col gap-4">
+            <!-- Withdraw earnings -->
+            <button onclick="openWithdraw()" class="w-full bg-white text-black font-black py-3.5 rounded-2xl uppercase tracking-[0.2em] text-xs active:scale-95 transition-transform flex items-center justify-center gap-2">
+                <i class="fas fa-money-bill-wave"></i> Withdraw Earnings
+            </button>
+            <!-- Referral link -->
+            <section class="glass-card p-4 border-dashed border-white/20 flex-1 flex items-center">
+                <div class="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5 w-full">
+                    <input type="text" id="refLink" readonly value="Loading..." class="bg-transparent text-yellow-400 text-[11px] w-full outline-none px-2 font-mono">
+                    <button onclick="copyLink()" id="copyBtn" class="bg-yellow-400 text-black px-4 py-3 rounded-lg font-black text-[10px] uppercase shrink-0">Copy</button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Withdrawal History -->
+    <section class="glass-card p-5 mb-6 hidden" id="historySection">
+        <h3 class="text-xs font-black uppercase tracking-widest mb-4">Recent Withdrawals</h3>
+        <div id="withdrawalList" class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs"></div>
+    </section>
+
+</main>
+
+<!-- Coming Soon Modal -->
+<div id="comingSoonModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card w-full max-w-xs p-8 mx-4 text-center transform scale-90 transition-transform bg-[#1a1a2e]" id="comingSoonBox">
+        <div class="w-16 h-16 bg-yellow-400/10 text-yellow-400 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">
+            <i class="fas fa-rocket"></i>
+        </div>
+        <h3 id="featureName" class="text-lg font-black uppercase tracking-widest text-white mb-2">FEATURE</h3>
+        <p class="text-gray-400 text-xs mb-8 uppercase tracking-tighter">This feature is currently under development. Stay tuned!</p>
+        <button onclick="closeComingSoon()" class="w-full bg-yellow-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-[10px]">
+            Return to Dashboard
+        </button>
+    </div>
+</div>
+
+<!-- Withdraw Modal -->
+<div id="withdrawModal" class="fixed inset-0 modal-bg flex items-center justify-center hidden opacity-0 transition-opacity duration-300">
+    <div class="glass-card w-full max-w-sm p-8 mx-4 transform scale-90 transition-transform bg-[#1a1a2e]" id="modalBox">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-sm font-black uppercase tracking-widest text-yellow-400">Withdraw Earnings</h3>
+            <button onclick="closeWithdraw()" class="text-gray-400"><i class="fas fa-times"></i></button>
+        </div>
+        <!-- Available notice -->
+        <div class="bg-green-500/10 border border-green-500/20 rounded-xl p-3 mb-4">
+            <p class="text-[10px] text-gray-400 uppercase font-bold">Available to Withdraw</p>
+            <p class="text-lg font-black text-green-400">Ksh. <span id="modal-withdrawable">0.00</span></p>
+            <p class="text-[10px] text-gray-500 mt-1">Referral commissions only. Binary deposits are locked.</p>
+        </div>
+        <form id="withdrawForm" class="space-y-4">
+            <div>
+                <input type="number" id="amt" placeholder="Amount (Min. Ksh 300)" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-yellow-400 font-bold outline-none" required min="300" oninput="calculateTax()">
+                <p id="taxNotice" class="text-xs text-gray-400 mt-2 px-1">A 5% government tax applies to all withdrawals.</p>
+            </div>
+            <input type="text" id="phone" value="{{ user.phone if user else '' }}" placeholder="M-Pesa Number" class="w-full bg-black/40 border border-white/10 p-4 rounded-xl text-white outline-none" required>
+            <button type="submit" id="subBtn" class="w-full bg-yellow-400 text-black font-black py-4 rounded-xl uppercase tracking-widest text-xs">Confirm Transfer</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleTheme() {
+    const isDark = document.getElementById('themeToggle').checked;
+    document.body.classList.toggle('dark-mode', isDark);
+    document.body.classList.toggle('light-mode', !isDark);
+}
+
+function calculateTax() {
+    const v = document.getElementById('amt').value;
+    const notice = document.getElementById('taxNotice');
+    if (v && v >= 300) {
+        notice.innerHTML = `You'll receive <span class="text-yellow-400 font-bold">Ksh. ${(v * 0.95).toFixed(2)}</span> after 5% tax.`;
+    } else {
+        notice.innerText = "A 5% government tax applies to all withdrawals.";
+    }
+}
+
+function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+
+function showComingSoon(name) {
+    if (document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
+    document.getElementById('featureName').innerText = name;
+    openModal('comingSoonModal', 'comingSoonBox');
+}
+function closeComingSoon() { closeModal('comingSoonModal', 'comingSoonBox'); }
+
+function openWithdraw() {
+    document.getElementById('modal-withdrawable').innerText = parseFloat(window._userData?.withdrawable_balance || 0).toFixed(2);
+    openModal('withdrawModal', 'modalBox');
+}
+function closeWithdraw() { closeModal('withdrawModal', 'modalBox'); }
+
+function openModal(id, boxId) {
+    const m = document.getElementById(id), b = document.getElementById(boxId);
+    m.classList.remove('hidden');
+    setTimeout(() => { m.classList.add('opacity-100'); b.classList.add('scale-100'); }, 10);
+}
+function closeModal(id, boxId) {
+    const m = document.getElementById(id), b = document.getElementById(boxId);
+    m.classList.remove('opacity-100'); b.classList.remove('scale-100');
+    setTimeout(() => m.classList.add('hidden'), 300);
+}
+
+function copyLink() {
+    const link = document.getElementById("refLink");
+    link.select();
+    navigator.clipboard.writeText(link.value);
+    document.getElementById('copyBtn').innerText = "COPIED!";
+    setTimeout(() => { document.getElementById('copyBtn').innerText = "COPY"; }, 2000);
+}
+
+async function fetchUserData() {
+    try {
+        const response = await fetch('/api/user');
+        if (!response.ok) return;
+        const data = await response.json();
+        window._userData = data;
+
+        document.getElementById('span-balance').innerText = parseFloat(data.withdrawable_balance).toFixed(2);
+        document.getElementById('span-earned').innerText = parseFloat(data.total_earned).toFixed(2);
+        document.getElementById('span-withdrawn').innerText = parseFloat(data.total_withdrawn).toFixed(2);
+        document.getElementById('span-referred').innerText = data.total_referred;
+        document.getElementById('refLink').value = `${window.location.origin}/register?ref=${data.referral_code}`;
+
+        const historySection = document.getElementById('historySection');
+        const listContainer = document.getElementById('withdrawalList');
+
+        if (data.withdrawals && data.withdrawals.length > 0) {
+            historySection.classList.remove('hidden');
+            listContainer.innerHTML = data.withdrawals.map(w => `
+                <div class="flex justify-between items-center bg-black/20 p-3 rounded-lg border border-white/5">
+                    <div>
+                        <p class="font-bold">Ksh. ${parseFloat(w.amount).toFixed(2)}</p>
+                        <p class="text-gray-500 text-[10px] uppercase">${w.date} | To: ${w.mpesa}</p>
+                    </div>
+                    <span class="px-2 py-1 rounded text-[9px] font-black uppercase ${w.status === 'confirmed' ? 'bg-green-500/10 text-green-400' : 'bg-yellow-500/10 text-yellow-400'}">${w.status}</span>
+                </div>
+            `).join('');
+        } else {
+            historySection.classList.add('hidden');
+        }
+    } catch (e) {
+        console.error("Fetch error:", e);
+    }
+}
+
+document.getElementById('withdrawForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+    const amt = document.getElementById('amt').value;
+    const phone = document.getElementById('phone').value;
+    const subBtn = document.getElementById('subBtn');
+    subBtn.innerText = "PROCESSING..."; subBtn.disabled = true;
+    try {
+        const res = await fetch('/api/withdraw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: amt, mpesa: phone })
+        });
+        const result = await res.json();
+        if (res.ok) {
+            alert("Withdrawal request submitted successfully!");
+            closeWithdraw();
+            fetchUserData();
+        } else {
+            alert("Error: " + result.error);
+        }
+    } catch (err) {
+        alert("Network error. Try again.");
+    } finally {
+        subBtn.innerText = "CONFIRM TRANSFER"; subBtn.disabled = false;
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    fetchUserData();
+    setInterval(fetchUserData, 15000);
+});
+</script>
+</body>
+</html>
